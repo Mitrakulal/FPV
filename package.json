@@ -3,7 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "FPV sim on the laptop, Android phone as a real transmitter (throttle holds, arm switch, cable link)",
+  "description": "Offline FPV simulator: laptop physics and rendering, Android phone as a real transmitter over USB",
+  "license": "MIT",
+  "author": "Mitrakulal",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mitrakulal/FPV.git"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "start": "node dist/server.js",
