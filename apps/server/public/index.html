@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>FPV Rig</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #07080a;
+        color: #dfe7f2;
+        font: 15px/1.6 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+      }
+      main {
+        width: min(640px, 92vw);
+        padding: 28px;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 24px;
+        letter-spacing: 0.02em;
+      }
+      p {
+        color: #8494a8;
+        margin: 0 0 18px;
+      }
+      .cards {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 1fr 1fr;
+      }
+      a.card {
+        display: block;
+        padding: 18px;
+        border: 1px solid #202733;
+        border-radius: 12px;
+        background: #0e1115;
+        color: inherit;
+        text-decoration: none;
+      }
+      a.card:hover {
+        border-color: #35e08a;
+      }
+      .card b {
+        display: block;
+        font-size: 16px;
+        margin-bottom: 4px;
+      }
+      .card span {
+        color: #6d7b8d;
+        font-size: 13px;
+      }
+      code {
+        background: #11161d;
+        border: 1px solid #1d2530;
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 13px;
+      }
+      ol {
+        color: #8494a8;
+        padding-left: 20px;
+      }
+      li {
+        margin: 6px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>FPV Rig</h1>
+      <p>Sim on the laptop. Phone as a transmitter. Cable link. Nothing leaves this machine.</p>
+      <div class="cards">
+        <a class="card" href="/sim/">
+          <b>Sim →</b>
+          <span>run it on the laptop (Chrome / Edge)</span>
+        </a>
+        <a class="card" href="/tx/">
+          <b>Transmitter →</b>
+          <span>open on the phone after <code>adb reverse</code></span>
+        </a>
+      </div>
+      <h3>Phone over USB</h3>
+      <ol>
+        <li>Enable Developer options → USB debugging on the phone.</li>
+        <li>Plug it in, accept the prompt.</li>
+        <li>
+          Run <code>powershell -ExecutionPolicy Bypass -File tools\tunnel.ps1</code> on the laptop.
+        </li>
+        <li>On the phone open <code>http://127.0.0.1:8080/tx/</code> in Chrome.</li>
+      </ol>
+      <p>No phone? The sim runs on the keyboard: W/S throttle, arrows, Space to arm.</p>
+    </main>
+  </body>
+</html>

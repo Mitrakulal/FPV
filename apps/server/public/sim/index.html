@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#05070a" />
+    <title>FPV Rig — sim</title>
+    <link rel="stylesheet" href="./hud.css" />
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+
+    <div id="boot">
+      <div class="boot-title">FPV RIG</div>
+      <div class="boot-sub">loading world…</div>
+    </div>
+
+    <div id="hud">
+      <div class="corner tl debug">
+        <div class="line"><span id="linkDot" class="dot"></span><span id="linkText">waiting for TX</span></div>
+        <div class="line mono"><span id="rtt">--</span> ms · <span id="hz">--</span> Hz · <span id="pkts">0</span> pkts</div>
+        <div class="line mono dim" id="age">no frames</div>
+      </div>
+
+      <div class="corner tr debug">
+        <div class="line mono"><span id="fps">--</span> fps · <span id="frameMs">--</span> ms</div>
+        <div class="line mono dim"><span id="tickRate">--</span> physics Hz</div>
+        <div class="line mono dim" id="cameraMode">FPV · tilt 30°</div>
+      </div>
+
+      <div class="corner bl">
+        <div class="thrwrap">
+          <div class="thrbar"><div class="thrfill" id="thrFill"></div><div class="hoverline"></div></div>
+          <div class="thrtxt mono" id="thrTxt">0%</div>
+        </div>
+        <div class="line mono dim debug" id="sticks">P 0 · R 0 · Y 0</div>
+      </div>
+
+      <div class="corner br osd">
+        <div class="line mono big"><span id="volts">25.2</span>V</div>
+        <div class="line mono"><span id="timer">0:00.0</span></div>
+        <div class="line mono"><span id="alt">0.0</span>m · <span id="spd">0.0</span>m/s</div>
+        <div class="line mono dim"><span id="tilt">0°</span> tilt</div>
+      </div>
+
+      <div class="corner bc">
+        <div class="pill mono" id="armPill">DISARMED</div>
+        <div class="pill mono dim" id="modePill">ACRO</div>
+      </div>
+
+      <div id="banner" class="banner" hidden></div>
+    </div>
+
+    <div id="vignette"></div>
+
+    <div id="help" class="help">
+      <strong>keys</strong> · W/S throttle · A/D yaw · arrows pitch/roll · Space arm · R restart · C camera ·
+      [ ] tilt · V analog look · M mute · H hide ·
+      <span id="helpPhone">phone: open /tx/ over adb reverse</span>
+    </div>
+
+    <script type="module" src="./sim.js?v=7"></script>
+  </body>
+</html>

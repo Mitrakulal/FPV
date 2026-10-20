@@ -1,0 +1,293 @@
+:root {
+  --text: #eef4fb;
+  --dim: #9aa8b8;
+  --accent: #35e08a;
+  --danger: #ff4b4b;
+  --warn: #ffb020;
+  --osd-font: "Cascadia Mono", "JetBrains Mono", Consolas, "SF Mono", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--osd-font);
+  user-select: none;
+}
+
+#view {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ---------------------------------------------------------------- boot */
+#boot {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  background: #04060a;
+  text-align: center;
+  transition: opacity 600ms ease;
+}
+
+#boot.done {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.boot-title {
+  font-size: 30px;
+  letter-spacing: 0.4em;
+  color: #e9f2ff;
+}
+
+.boot-sub {
+  font-size: 12px;
+  letter-spacing: 0.25em;
+  color: #6b7c90;
+  text-transform: uppercase;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ---------------------------------------------------------------- hud */
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+.corner {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-shadow:
+    0 0 2px rgb(0 0 0 / 0.95),
+    0 1px 3px rgb(0 0 0 / 0.9),
+    0 0 12px rgb(0 0 0 / 0.55);
+}
+
+.tl {
+  top: 16px;
+  left: 18px;
+}
+.tr {
+  top: 16px;
+  right: 18px;
+  text-align: right;
+  align-items: flex-end;
+}
+.bl {
+  left: 18px;
+  bottom: 18px;
+}
+.br {
+  right: 18px;
+  bottom: 18px;
+  text-align: right;
+  align-items: flex-end;
+}
+.bc {
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  flex-direction: row;
+  gap: 12px;
+}
+
+.line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.mono {
+  font-family: var(--osd-font);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+
+.big {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.dim {
+  color: var(--dim);
+}
+
+.debug {
+  opacity: 0.62;
+  font-size: 11px;
+}
+
+.debug .mono {
+  font-size: 11px;
+}
+
+.osd {
+  opacity: 0.95;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 8px currentColor;
+  align-self: center;
+}
+.dot.ok {
+  background: var(--accent);
+}
+
+.pill {
+  padding: 1px 3px;
+  border: none;
+  background: none;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: #d6e2ef;
+  text-shadow:
+    0 0 2px #000,
+    0 1px 3px #000;
+}
+
+.pill.armed {
+  color: var(--accent);
+}
+
+.pill.dim {
+  color: var(--dim);
+}
+
+.thrwrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 9px;
+}
+
+.thrbar {
+  position: relative;
+  width: 12px;
+  height: 104px;
+  border: 1px solid rgb(220 235 250 / 0.28);
+  background: rgb(4 8 12 / 0.35);
+  overflow: hidden;
+  box-shadow: 0 0 10px rgb(0 0 0 / 0.45);
+}
+
+.thrfill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0%;
+  background: linear-gradient(to top, #1a6b45, var(--accent));
+  transition: height 30ms linear;
+}
+
+.hoverline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 36%;
+  height: 1px;
+  background: rgb(255 209 102 / 0.6);
+}
+
+.thrtxt {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.banner {
+  position: absolute;
+  left: 50%;
+  top: 27%;
+  transform: translateX(-50%);
+  padding: 6px 16px;
+  background: rgb(0 0 0 / 0.34);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-align: center;
+  line-height: 1.6;
+  white-space: nowrap;
+  text-shadow:
+    0 0 3px #000,
+    0 2px 6px #000;
+}
+
+.banner.lost {
+  color: var(--danger);
+}
+
+.banner.crashed {
+  color: var(--warn);
+}
+
+#vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 190px 30px rgb(0 0 0 / 0.5);
+  opacity: 0;
+  transition: opacity 220ms;
+}
+
+#vignette.analog {
+  opacity: 1;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0.022) 0px,
+    rgb(255 255 255 / 0.022) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+.help {
+  position: fixed;
+  left: 50%;
+  bottom: 3px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: #55657a;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px #000;
+}
+
+@media (max-width: 760px) {
+  .help {
+    display: none;
+  }
+}
