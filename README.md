@@ -1,128 +1,341 @@
 # FPV Rig
 
-A local FPV simulator. The laptop renders and runs the physics; the Android phone is the
-transmitter, over a USB cable. No accounts, no internet, no app install, no gamepad
-emulation, no spring-loaded throttle.
+**A zero-cost, offline FPV simulator that turns an Android phone into a real transmitter over USB.**
+
+The laptop runs the physics and renders the airfield. The phone is the radio: absolute
+throttle that stays where you put it, an arm switch, expo, and a link that targets 250 Hz
+down a USB cable. No accounts, no internet, no APK, no virtual gamepad.
+
+<p align="center">
+  <img src="docs/media/hero.png" alt="FPV Rig start gate and first course gate" width="100%">
+</p>
+
+## What it is
+
+FPV Rig is a local flight simulator built around one idea: **a phone can be a better
+transmitter than a gamepad if it stops behaving like a gamepad.** It streams the raw
+positions of two gimbals to a desktop-class flight model, which applies the same semantics
+a radio does — throttle hold, arm state, expo, deadband and failsafe.
+
+The result is a cheap way to practise real FPV habits: hover at a fixed throttle, manage
+altitude with small inputs, fly a gate line, and recover from mistakes. It is not a
+replacement for a full commercial sim, and it is not connected to a real aircraft.
+
+## Design goals
+
+- **Real transmitter semantics.** Throttle is a position, not a spring. The arm switch
+  gates the motors. Expo and deadband live on the phone, where a radio would apply them.
+- **A flight model that behaves like a 5-inch quad.** Fixed 1 kHz rigid-body physics,
+  thrust that scales with throttle squared, motor lag, rate PID, prop wash and battery sag.
+- **Local and free.** Only a laptop, a phone and a USB cable are required. The server binds
+  to loopback; nothing is exposed to the network and nothing needs an account.
+- **Smooth and measurable.** Rendering and physics are decoupled. The HUD reports link
+  rate, round-trip time, physics tick rate and frame time so the pipeline is visible.
+- **Honest failure.** Small knocks are survivable; a real slam ends the run. There is no
+  automatic respawn, so a mistake has a cost.
+
+**Non-goals:** controlling a real aircraft, multiplayer, cloud hosting, a native mobile
+app, and photoreal asset production. A virtual-gamepad bridge for third-party sims is
+possible but is not part of the current build.
+
+## Highlights
+
+- **Phone as TX over USB** — the page is served from the phone's own `127.0.0.1` through
+  `adb reverse`; the link never touches Wi-Fi or a router.
+- **Absolute throttle, Mode 1/2, hold/spring** — the default is Mode 2 with HOLD. A training
+  mode springs the throttle back to the hover point.
+- **ANGLE and ACRO** — ANGLE is the phone default and self-levels to ±35°; ACRO exposes the
+  full rate-mode model. The top-right button switches between them.
+- **1 kHz physics** — quaternion rigid body, gyroscopic coupling, linear + quadratic drag,
+  motor lag, differential-thrust torque, yaw reaction, battery sag and prop-wash disturbance.
+- **Forgiving contact model** — light bumps bounce and slide; only hard impacts or a
+  nearly-inverted ground strike end the attempt.
+- **A real course** — 100 m × 400 m runway, warehouse, containers, tyres, pallets and five
+  gates, with FPV, chase and overview cameras.
+- **Instrumented** — live HUD for RTT, packet rate, physics Hz, FPS, frame time, voltage,
+  altitude, speed, tilt and run timer.
+
+## How it works
 
 ```
- phone browser (TX page)          laptop
-┌──────────────────────┐      ┌──────────────────────────────┐
-│ two gimbals, arm     │ USB  │ node relay ──► sim (WebGL2)  │
-│ switch, 250 Hz       │─────►│ 1 kHz rigid body, rate PID   │
-│ absolute stick data  │ adb  │ HUD: RTT, Hz, fps, frame ms  │
-└──────────────────────┘      └──────────────────────────────┘
+┌──────────────────────────────┐          USB cable / adb reverse          ┌────────────────────────────────┐
+│ Android phone                │                                           │ Laptop                         │
+│ Chrome, /tx/                 │  ws://127.0.0.1:8080/ws   ~1 ms loopback  │ Node server                    │
+│  · two gimbals, Mode 1/2     │ ────────────────────────────────────────► │  · static files                │
+│  · absolute throttle         │                                           │  · WebSocket relay             │
+│  · arm, expo, deadband       │ ◄──────────────────────────────────────── │  · frame validation            │
+│  · 250 Hz binary frames      │            status / telemetry             │                                │
+└──────────────────────────────┘                                           │  ┌──────────────────────────┐  │
+                                                                           │  │ three.js / WebGL2 sim    │  │
+                                                                           │  │ 1 kHz flight physics     │  │
+                                                                           │  │ HUD + cameras            │  │
+                                                                           │  └──────────────────────────┘  │
+                                                                           └────────────────────────────────┘
 ```
 
-The phone loads `http://127.0.0.1:8080/tx/` from its **own** localhost. `adb reverse`
-maps that port back to the laptop, so the traffic never touches WiFi or the router.
+`adb reverse tcp:8080 tcp:8080` makes the phone's `127.0.0.1:8080` reach the laptop's
+server. The phone loads the transmitter page from that address, opens a WebSocket back to
+the same origin, and streams 22-byte binary frames. The relay validates each frame and
+forwards it to every connected sim. The sim's input layer consumes the latest frame,
+applies the TX conventions, and feeds the fixed-step physics.
+
+The server binds to `127.0.0.1` (configurable with `HOST`), serves the static app and
+exposes `/health`. A watchdog marks the link stale after 250 ms; stale input cuts the
+motors and shows `LINK LOST` on the HUD.
 
 ## Quick start
 
-1. Double-click **`run.bat`** — installs deps on first run, builds, starts the server and
-   opens <http://127.0.0.1:8080/sim/>.
-2. Plug the phone in, enable **Developer options → USB debugging**, accept the prompt.
-3. Double-click **`connect-phone.bat`** — sets up the cable tunnel (uses the bundled
-   `tools/platform-tools/adb.exe`).
-4. On the phone, open Chrome at **`http://127.0.0.1:8080/tx/`**, tap `FULL`.
-5. Throttle stick stays where you leave it. Pull it to the bottom, tap **DISARMED → ARMED**,
-   then raise throttle to ~35% and fly.
-6. The phone boots in **ANGLE** (self-levelling): push the right stick up and the quad leans
-   forward and flies away. Tap the top-right **ANGLE/ACRO** button for rate-mode freestyle.
+### Requirements
 
-No phone handy? The sim is playable on the keyboard:
-`W/S` throttle · `A/D` yaw · arrows pitch/roll · `Space` arm · `R` restart · `C` chase view ·
-`[` `]` camera tilt · `V` analog look · `M` mute. The phone has the same thing as the
-**R · RESTART** button at the bottom of the transmitter screen.
+- Windows 10 or 11 (the launcher and ADB helper are BAT/PowerShell scripts).
+- Node.js 22 or newer.
+- Chrome or Edge on the laptop.
+- An Android phone with Developer options and USB debugging, plus a data-capable USB cable.
 
-No auto-respawn: a hard crash leaves the quad where it fell (and cuts the motors) until you
-press `R`, which puts you back on the start line. Light knocks are not crashes — a 10 m drop,
-a fast low pass along the runway, or clipping a container at walking pace just bumps you and
-you keep flying. Only a real slam (roughly 20 m free fall or faster) or ending up upside down
-ends the attempt.
+The Node server and web app themselves are platform-neutral; the convenience scripts are
+Windows-specific.
 
-## The throttle problem, solved at the source
+### Run it
 
-Windows virtual gamepads always spring their axes back to centre. A sim then reads the
-released stick as 50% throttle, so you end up holding the stick *below* centre forever to
-hover — exactly the thing that feels wrong.
+1. **Start the laptop side.** Double-click **`run.bat`**. On first run it installs
+   dependencies, builds the app, starts the server and opens
+   <http://127.0.0.1:8080/sim/>.
+2. **Prepare the phone.** Enable **Developer options → USB debugging**, connect the cable
+   and accept the RSA prompt.
+3. **Open the cable tunnel.** Double-click **`connect-phone.bat`**. It uses the bundled
+   `tools/platform-tools/adb.exe` and runs `adb reverse tcp:8080 tcp:8080`.
+4. **Open the transmitter.** On the phone, open Chrome at
+   **`http://127.0.0.1:8080/tx/`** and tap **FULL**.
+5. **Arm and fly.** Pull the throttle to the bottom, tap **DISARMED → ARMED**, raise the
+   throttle to about 36% and fly. In ANGLE, pushing the right stick forward pitches the
+   nose down and moves you forward.
+6. **Restart a run.** Use **R · RESTART** on the phone or `R` on the keyboard. A restart
+   disarms the phone so the next run cannot start hot.
 
-This rig never emulates a gamepad. The phone sends four absolute axis values; the sim
-applies transmitter semantics itself:
+No phone nearby? The keyboard flies the same physics:
 
-- **throttle is a latch** — the stick's vertical position *is* the throttle, and it holds
-  when you lift your thumb (optional "spring to 35%" training mode in `SET`);
-- **arm switch** gates the motors, and refuses to arm above 10% throttle;
-- **expo** is applied on the phone, like a radio;
-- **link loss cuts the motors** (250 ms watchdog) and disarms the page when it is hidden.
+```text
+W / S        throttle up / down (ramps, not a latch)
+A / D        yaw
+Arrow keys   pitch / roll
+Space        arm / disarm
+R            restart from the start line
+C / O        chase / overview camera
+[ / ]        camera tilt
+V            analog look
+M            mute audio
+H            hide the help bar
+```
 
-## What is simulated
+The keyboard fallback runs ACRO; ANGLE is selected on the phone's top-right toggle.
 
-Flight model in `apps/sim/src/physics.ts`, pure maths, no renderer:
+## Controls
 
-- 650 g 5" quad, 4 motors at 115 mm, thrust ∝ throttle² (so hover lands near 35%),
-- first-order motor lag, differential thrust mixing fed into the real torque equation,
-- full rigid-body rotation with gyroscopic coupling, quaternion integration,
-- quadratic + linear drag, angular damping, battery sag under load, prop-wash
-  disturbance when descending through your own wake,
-- Betaflight-style rate loop (P/I/D on body rates) with per-axis rate limits,
-- forgiving ground + obstacle contact (soft bumps bounce, only hard hits crash), angle mode
-  (self-levelling, default on the phone) and acro rate mode from the same `ACRO` toggle,
-- fixed 1 kHz physics tick with an accumulator, independent of frame rate.
+| Action | Phone transmitter | Keyboard |
+|---|---|---|
+| Arm / disarm | **ARM** button; throttle must be below 10% | `Space` |
+| Throttle | left stick vertical, holds position | `W` / `S` |
+| Yaw | left stick horizontal | `A` / `D` |
+| Pitch / roll | right stick | arrow keys |
+| ANGLE ↔ ACRO | top-right mode button | keyboard is ACRO |
+| Restart | **R · RESTART** | `R` |
+| Camera | — | `C` (chase), `O` (overview) |
+| Camera tilt | — | `[` / `]` |
+| Analog look | — | `V` |
+| Mute | — | `M` |
+| Hide help | — | `H` |
+| TX settings | **SET** | — |
 
-Rendering is three.js: a floodlit arena, a five-gate course, crates and poles, a quad model,
-an FPV camera at the body centre with rotor vibration and adjustable tilt, plus a chase cam.
+The phone's **SET** sheet exposes stick mode (1 or 2), throttle behavior (HOLD or SPRING),
+expo, deadband, stick size, haptics, and pitch/yaw inversion. Settings are persisted in
+`localStorage`. The page requests fullscreen and a screen wake lock; hiding the page
+disarms the transmitter and releases the sticks.
 
-## Measured on this machine
+## Specifications
 
-| thing | value |
+### Airframe and flight model
+
+| Property | Value |
 |---|---|
-| relay throughput from a simulated TX | 250 frames/s |
-| phone ↔ server round trip (loopback) | ~1 ms |
-| physics tick rate | ~1000–1100 Hz |
-| phone page send rate | 140–250 Hz (browser timer floor) |
-| sim frame rate | GPU bound; software SwiftShader was 10–40 fps, a real GPU is far higher |
+| All-up mass | 650 g |
+| Class | 5-inch, 115 mm motor-to-centre arms, 6S |
+| Motors | 4 × 12.5 N maximum thrust (50 N total) |
+| Thrust-to-weight | 7.8 : 1 |
+| Hover throttle | ≈ 36% at a full pack |
+| Thrust curve | proportional to throttle², with first-order motor lag (τ = 30 ms) |
+| Rate limits (ACRO) | 600 °/s pitch, 400 °/s yaw, 600 °/s roll |
+| ANGLE mode | ±35° lean, 150 °/s yaw cap, ≈ 0.25 s step response |
+| Drag | linear 0.05, quadratic 0.012 |
+| Battery | 25.2 V full pack, 3.0 V sag at full load |
+| Disturbances | prop wash while descending, angular damping, gyroscopic coupling |
+| Integration | fixed 1 kHz accumulator, quaternion orientation |
 
-The HUD shows fps, frame ms, tick rate, packets/s, RTT and link age live, so you can see
-the pipeline rather than trust it.
+The flight model is a renderer-independent TypeScript module
+(`apps/sim/src/physics.ts`). It has no three.js imports and is exercised directly by the
+unit tests.
 
-## Layout
+### Flight controller
 
+- Betaflight-style rate loop: proportional, integral and derivative terms on body rates,
+  with integral clamping and a filtered derivative.
+- Per-axis rate limits, with a lower yaw cap in ANGLE so attitude correction cannot be
+  outrun by yaw.
+- ANGLE mode uses a heading-relative lean target, a 50 ms target filter, `kp = 4` and a
+  180 °/s correction limit. The result is a predictable step response rather than a snap.
+- Arming is gated by the phone (throttle below 10%). Link loss and page hide both disarm.
+- A hard crash cuts the motors and leaves the quad where it fell; `R` resets to the start.
+
+### Link and protocol
+
+The phone sends a **22-byte little-endian frame** at a 250 Hz target (the browser timer
+floor is typically 140–250 Hz):
+
+| Offset | Type | Field |
+|---:|---|---|
+| 0 | `u8` | magic `0xF1` |
+| 1 | `u8` | message type (`1` = TX frame) |
+| 2 | `u16` | sequence |
+| 4 | `u32` | sender timestamp, microseconds |
+| 8 | `i16` | throttle, `-1000` bottom … `+1000` top |
+| 10 | `i16` | yaw, `-1000` left … `+1000` right |
+| 12 | `i16` | pitch, `-1000` nose down … `+1000` nose up |
+| 14 | `i16` | roll, `-1000` left … `+1000` right |
+| 16 | `u8` | flags: bit 0 armed, bit 1 ANGLE, bit 2 HOLD, bit 3 failsafe |
+| 17 | `u8` | stick mode (1 or 2) |
+| 18 | `u16` | auxiliary switches, reserved |
+| 20 | `u16` | checksum of bytes 0–19 |
+
+Malformed frames are dropped by the relay. The latest valid frame is cached and sent to a
+newly connected sim immediately. JSON control messages carry `ping`/`pong`, `hello` and the
+phone's `reset` request.
+
+### Rendering
+
+- three.js r186 on WebGL2; HDR sky, PBR ground and structure textures.
+- Directional sun with shadows, 4× MSAA, a bloom pass, ACES-style grading, motion smear and
+  a toggleable analog look.
+- Adaptive render scale based on viewport size, plus runtime quality reduction when frame
+  time slips.
+- FPV camera at the body centre with adjustable tilt and speed-dependent FOV; springy chase
+  camera; free overview camera.
+- Fully local assets. The large HDR sky and texture set are committed so the sim works
+  offline after a build.
+
+## The course
+
+The airfield is a 100 m × 400 m runway with a partly collapsed warehouse, stacked shipping
+containers, tyre walls, pallets, barrels, light poles and five numbered gates. The start
+gate is directly ahead of the spawn; gates 1–5 lead down the strip and around the props.
+
+![Airfield overview](docs/media/airfield.png)
+
+The phone transmitter:
+
+![Phone transmitter](docs/media/transmitter.png)
+
+## Measured performance
+
+Numbers from the development machine (Windows, Chrome, USB-tethered Android phone):
+
+| Metric | Result |
+|---|---|
+| Relay throughput, simulated TX | 250 frames/s |
+| Phone ↔ server round trip over loopback | ≈ 1 ms |
+| Physics tick rate | 1,000–1,100 Hz |
+| Phone page send rate | 140–250 Hz (browser timer limits) |
+| Render loop | GPU-bound; live frame time is shown in the HUD |
+| Unit tests | 23 |
+
+The physics tick is independent of render frame rate: a slow frame does not slow the
+flight model, and the HUD exposes both rates so the claim is checkable.
+
+## Project layout
+
+```text
+fpv/
+├─ apps/
+│  ├─ server/              Node static host + WebSocket relay + /health
+│  │  ├─ src/server.ts
+│  │  └─ public/           sim, tx, textures, HDR, HUD
+│  ├─ sim/                 three.js client and physics
+│  │  └─ src/
+│  │     ├─ physics.ts     rigid body, motors, rate loop, crash model
+│  │     ├─ input.ts       phone link, reset handling, keyboard fallback
+│  │     ├─ scene.ts       airfield, props, gates, colliders
+│  │     ├─ post.ts        HDR pipeline, bloom, grading, analog look
+│  │     ├─ quad.ts        quad model and rotor visuals
+│  │     ├─ assets.ts      texture/HDR loading
+│  │     └─ main.ts        render loop, cameras, HUD, audio
+│  └─ tx/                  phone transmitter page
+├─ packages/protocol/      22-byte frame codec, shared by all three apps
+├─ tests/                  physics + protocol unit tests
+├─ tools/                  ADB tunnel, smoke, touch, screenshot and perf checks
+├─ docs/                   architecture, roadmap and media
+├─ run.bat                 install, build, serve, open the sim
+└─ connect-phone.bat       set up adb reverse
 ```
-apps/server/   node relay: static files, ws hub, watchdog, /health
-apps/sim/      physics core + three.js client
-apps/tx/       phone transmitter UI
-packages/protocol/  binary frame format shared by all three
-tools/         adb tunnel, smoke tests, headless screenshots
-tests/         physics + protocol unit tests
-docs/PLAN.md   the full plan and phase list
-```
 
-## Tests
+## Development
 
 ```bat
-npm test          :: physics + protocol (23 tests)
-node tools/smoke.ts      :: server up, pages served, 250 Hz frames arrive (server must run)
-node tools/tx-test.mjs   :: touch drag, throttle hold, arm guard (server must run)
-node tools/screenshot.mjs :: headless render check + screenshots in scratch\
+npm install
+npm run build       :: dist/server.js + public sim.js/tx.js
+npm start           :: serve on http://127.0.0.1:8080
+npm run watch       :: rebuild on change
+npm run typecheck   :: TypeScript, no emit
 ```
 
-## Troubleshooting
+Build outputs (`dist/`, `apps/server/public/sim/sim.js`,
+`apps/server/public/tx/tx.js`) are intentionally not committed. Run `npm run build` after a
+fresh clone, or use `run.bat`, which does it for you.
 
-- **`adb` with no `reverse`** — bundled adb is 37.x; make sure `connect-phone.bat` is what
-  you ran, not an old system adb.
-- **Phone shows the page but no link** — check `adb devices` says `device`, then re-run
-  `connect-phone.bat` (the tunnel dies when the cable is replugged).
-- **Chrome sleeps / dims** — the TX page requests a screen wake lock and fullscreen; tap
-  the page once after loading so the browser grants them.
-- **Port already in use** — another server is running; close that window or set
-  `FPV_PORT` for both the server and the tunnel.
+The server binds to `127.0.0.1:8080`. The sim accepts `?alt=` (spawn altitude) and
+`?view=chase|overview` for screenshots and testing.
 
-## Phase status
+## Testing
 
-- Phase 0 — skeleton, server, cable tunnel, latency HUD: **done**
-- Phase 1 — transmitter (gimbals, throttle hold, arm, expo, wake lock, failsafe): **done**
-- Phase 2 — flight model, arena, FPV camera, crash/reset: **done, first pass**
-- Phase 3 — feel tuning with your thumbs (rates, PIDs, drag, camera tilt): next
-- Phase 4 — gates with timing, laps, ghost
-- Phase 5 — polish, settings persistence, OSD
-- Phase 6 — optional ViGEm bridge for Liftoff/Uncrashed/FPV Freerider (sticky throttle)
+```bat
+npm test                    :: 23 physics + protocol tests
+npm run typecheck           :: strict TypeScript check
+node tools/smoke.ts         :: server up, pages served, 250 Hz relay, phone reset
+node tools/tx-test.mjs      :: touch drag, throttle hold, arm guard (server must run)
+node tools/screenshot.mjs   :: headless render check + screenshots
+node tools/perf.mjs         :: frame-time sampling helper
+```
+
+The physics suite covers hover equilibrium, the thrust curve, rate limits, ANGLE step
+response, drag, crash forgiveness, dead-fall behavior and the 10 m/20 m drop cases. The
+protocol suite covers round-trip encoding, checksum rejection and axis conversion.
+
+## Status and roadmap
+
+| Phase | Scope | Status |
+|---|---|---|
+| 0 | Skeleton, static server, USB tunnel, latency HUD | Done |
+| 1 | Phone transmitter, throttle hold, arm, failsafe, settings | Done |
+| 2 | Flight model, airfield, cameras, crash/reset | Done |
+| 3 | Feel tuning against a real pilot; air mode; tuning panel | In progress |
+| 4 | Gate timing, splits, laps, ghost | Planned |
+| 5 | Visual and performance polish, OSD refinements | In progress |
+| 6 | Optional ViGEm bridge for third-party sims | Exploratory |
+
+Current limitations, stated plainly: **air mode / idle-up is not implemented**; there is no
+lap timer or ghost yet; the in-sim rates/PID/camera panel is not built; the convenience
+scripts target Windows. The flight model, ANGLE/ACRO modes, crash model and phone link are
+working and tested. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the next steps and
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the implementation details.
+
+## Credits
+
+- [three.js](https://threejs.org/) — MIT.
+- [ws](https://github.com/websockets/ws) — MIT.
+- [esbuild](https://esbuild.github.io/) — MIT.
+- [TypeScript](https://www.typescriptlang.org/) — Apache-2.0.
+- Sky and PBR textures from [Poly Haven](https://polyhaven.com/) — CC0.
+- The rate-loop structure is inspired by Betaflight; this project is not affiliated with
+  or endorsed by the Betaflight project.
+
+## License
+
+The source code is released under the MIT License — see [`LICENSE`](LICENSE). The bundled
+Poly Haven sky and textures are CC0 and remain under their original terms.
