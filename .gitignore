@@ -1,0 +1,14 @@
+node_modules/
+dist/
+scratch/
+.venv/
+apps/server/public/sim/sim.js
+apps/server/public/tx/tx.js
+apps/server/public/shadow/
+tools/platform-tools/
+tools/diag.mjs
+tools/shadowtest.ts
+tools/webfpv-look.mjs
+*.log
+Thumbs.db
+.DS_Store

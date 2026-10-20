@@ -1,0 +1,28 @@
+{
+  "name": "fpv-rig",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "FPV sim on the laptop, Android phone as a real transmitter (throttle holds, arm switch, cable link)",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node dist/server.js",
+    "dev": "npm run build && npm run start",
+    "watch": "node scripts/build.mjs --watch",
+    "test": "node --test tests/physics.test.ts tests/protocol.test.ts",
+    "smoke": "node tools/smoke.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "three": "^0.186.1",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/three": "^0.186.0",
+    "@types/ws": "^8.18.2",
+    "esbuild": "^0.28.2",
+    "puppeteer-core": "^25.15.0",
+    "typescript": "^7.0.2"
+  }
+}
