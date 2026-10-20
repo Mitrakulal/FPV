@@ -203,8 +203,7 @@ start line.
 - three.js r186, WebGL2, ACES-style tonemapping.
 - HDR environment loaded from the bundled Poly Haven sky; PBR textures for asphalt,
   concrete, corrugated metal, grass, gravel and rust.
-- Directional sun with a 2048² shadow map; contact shadows are enabled for the quad and
-  props.
+- Directional sun with a 2048² shadow map; the quad and props cast shadows.
 - Render targets use 4× MSAA where supported. A two-pass bloom is composited in the final
   shader together with vignette, motion smear and an optional analog look.
 - Pixel ratio is chosen from viewport size and capped at 1.5; a runtime quality controller

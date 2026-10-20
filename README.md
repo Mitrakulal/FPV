@@ -79,9 +79,9 @@ the same origin, and streams 22-byte binary frames. The relay validates each fra
 forwards it to every connected sim. The sim's input layer consumes the latest frame,
 applies the TX conventions, and feeds the fixed-step physics.
 
-The server binds to `127.0.0.1` (configurable with `HOST`), serves the static app and
-exposes `/health`. A watchdog marks the link stale after 250 ms; stale input cuts the
-motors and shows `LINK LOST` on the HUD.
+The server binds to loopback only (`127.0.0.1:8080`), serves the static app and exposes
+`/health`. A watchdog marks the link stale after 250 ms; stale input cuts the motors and
+shows `LINK LOST` on the HUD.
 
 ## Quick start
 
@@ -188,7 +188,7 @@ unit tests.
 ### Link and protocol
 
 The phone sends a **22-byte little-endian frame** at a 250 Hz target (the browser timer
-floor is typically 140–250 Hz):
+limits are typically 140–250 Hz):
 
 | Offset | Type | Field |
 |---:|---|---|
