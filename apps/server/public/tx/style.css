@@ -40,8 +40,10 @@ body {
 
 #bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  row-gap: 6px;
   padding: 8px 10px;
   border-bottom: 1px solid var(--line);
   background: var(--panel);
@@ -236,10 +238,40 @@ button:active {
 }
 
 .restart {
-  padding: 4px 10px;
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  min-width: 34px;
+  padding: 7px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   white-space: nowrap;
+  border-color: #46232a;
+  color: var(--danger);
+  background: #1a0f12;
+}
+
+@media (max-width: 560px) {
+  #bar {
+    gap: 6px;
+    padding: 8px;
+  }
+  .pill {
+    padding: 4px 7px;
+    font-size: 11px;
+  }
+  .pill.mono {
+    display: none;
+  }
+  .arm {
+    min-width: 92px;
+    padding: 7px 8px;
+  }
+  .ghost {
+    padding: 7px 8px;
+  }
+  .restart {
+    min-width: 30px;
+    padding: 7px 7px;
+  }
 }
 
 .msg {

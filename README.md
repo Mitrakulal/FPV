@@ -109,8 +109,8 @@ Windows-specific.
 5. **Arm and fly.** Pull the throttle to the bottom, tap **DISARMED → ARMED**, raise the
    throttle to about 36% and fly. In ANGLE, pushing the right stick forward pitches the
    nose down and moves you forward.
-6. **Restart a run.** Use **R · RESTART** on the phone or `R` on the keyboard. A restart
-   disarms the phone so the next run cannot start hot.
+6. **Restart a run.** Use the **R** button next to **ARM** on the phone or `R` on the
+   keyboard. A restart disarms the phone so the next run cannot start hot.
 
 No phone nearby? The keyboard flies the same physics:
 
@@ -138,7 +138,7 @@ The keyboard fallback runs ACRO; ANGLE is selected on the phone's top-right togg
 | Yaw | left stick horizontal | `A` / `D` |
 | Pitch / roll | right stick | arrow keys |
 | ANGLE ↔ ACRO | top-right mode button | keyboard is ACRO |
-| Restart | **R · RESTART** | `R` |
+| Restart | **R** next to **ARM** | `R` |
 | Camera | — | `C` (chase), `O` (overview) |
 | Camera tilt | — | `[` / `]` |
 | Analog look | — | `V` |
@@ -200,7 +200,7 @@ limits are typically 140–250 Hz):
 | 10 | `i16` | yaw, `-1000` left … `+1000` right |
 | 12 | `i16` | pitch, `-1000` nose down … `+1000` nose up |
 | 14 | `i16` | roll, `-1000` left … `+1000` right |
-| 16 | `u8` | flags: bit 0 armed, bit 1 ANGLE, bit 2 HOLD, bit 3 failsafe |
+| 16 | `u8` | flags: bit 0 armed, bit 1 ANGLE, bit 2 HOLD, bit 3 failsafe, bit 4 reset pulse |
 | 17 | `u8` | stick mode (1 or 2) |
 | 18 | `u16` | auxiliary switches, reserved |
 | 20 | `u16` | checksum of bytes 0–19 |
@@ -244,7 +244,7 @@ Numbers from the development machine (Windows, Chrome, USB-tethered Android phon
 | Physics tick rate | 1,000–1,100 Hz |
 | Phone page send rate | 140–250 Hz (browser timer limits) |
 | Render loop | GPU-bound; live frame time is shown in the HUD |
-| Unit tests | 23 |
+| Unit tests | 24 |
 
 The physics tick is independent of render frame rate: a slow frame does not slow the
 flight model, and the HUD exposes both rates so the claim is checkable.
@@ -295,7 +295,7 @@ The server binds to `127.0.0.1:8080`. The sim accepts `?alt=` (spawn altitude) a
 ## Testing
 
 ```bat
-npm test                    :: 23 physics + protocol tests
+npm test                    :: 24 physics + protocol tests
 npm run typecheck           :: strict TypeScript check
 node tools/smoke.ts         :: server up, pages served, 250 Hz relay, phone reset
 node tools/tx-test.mjs      :: touch drag, throttle hold, arm guard (server must run)

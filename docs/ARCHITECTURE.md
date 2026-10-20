@@ -52,7 +52,7 @@ sim decodes it again.
 10  i16  yaw       -1000 … +1000
 12  i16  pitch     -1000 … +1000
 14  i16  roll      -1000 … +1000
-16  u8   flags     bit0 armed, bit1 ANGLE, bit2 HOLD, bit3 failsafe
+16  u8   flags     bit0 armed, bit1 ANGLE, bit2 HOLD, bit3 failsafe, bit4 reset pulse
 17  u8   stick mode 1 or 2
 18  u16  aux switches, reserved
 20  u16  checksum of bytes 0…19
@@ -86,9 +86,10 @@ Malformed frames are counted and dropped. Status JSON (`tx`, `txAgeMs`, `txHz`, 
 The sim treats a frame as fresh for 250 ms. If the link goes stale, input is disarmed and
 the HUD shows `LINK LOST`; the physics keeps running so the quad falls rather than freezing.
 
-The phone's **R · RESTART** button sends `{"type":"reset"}`. The server forwards it to all
-sims; each sim resets to the start line. The phone disarms first, so a restart cannot resume
-with the throttle still up.
+The R button next to ARM sends `{"type":"reset"}` and holds the frame's reset bit high
+for 200 ms. The relay forwards the JSON message to all sims; the sim also resets on the
+rising edge of the binary bit, so restart works even if the relay predates the JSON path.
+The phone disarms first, so a restart cannot resume with the throttle still up.
 
 ## Flight model
 

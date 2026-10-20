@@ -5,6 +5,7 @@
 import {
   FLAG_ARMED,
   FLAG_HOLD,
+  FLAG_RESET,
   decodeTxFrame,
   encodeTxFrame,
 } from '../packages/protocol/protocol.ts';
@@ -34,6 +35,7 @@ await new Promise<void>((resolve, reject) => {
   let received = 0;
   let bad = 0;
   let resetSeen = false;
+  let resetFlagSeen = false;
 
   sim.binaryType = 'arraybuffer';
   sim.onmessage = (ev) => {
@@ -48,7 +50,10 @@ await new Promise<void>((resolve, reject) => {
     }
     const frame = decodeTxFrame(ev.data as ArrayBuffer);
     if (!frame) bad++;
-    else received++;
+    else {
+      received++;
+      if ((frame.flags & FLAG_RESET) !== 0) resetFlagSeen = true;
+    }
   };
 
   sim.onopen = () => {
@@ -67,7 +72,7 @@ await new Promise<void>((resolve, reject) => {
               yaw: 0,
               pitch: 100,
               roll: -100,
-              flags: FLAG_ARMED | FLAG_HOLD,
+              flags: FLAG_ARMED | FLAG_HOLD | (sent === 50 ? FLAG_RESET : 0),
               mode: 2,
               aux: 0,
             }),
@@ -84,6 +89,7 @@ await new Promise<void>((resolve, reject) => {
         assert(status.tx === true, 'server marks TX link live while frames arrive');
         assert(status.txHz > 150, `server measured ${status.txHz} Hz from the phone`);
         assert(resetSeen, 'phone R button resets the sim');
+        assert(resetFlagSeen, 'binary reset pulse reaches the sim');
         resolve();
       } catch (err) {
         reject(err);

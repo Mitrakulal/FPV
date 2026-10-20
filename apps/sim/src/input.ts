@@ -1,5 +1,6 @@
 import {
   FLAG_ARMED,
+  FLAG_RESET,
   fromAxis,
   decodeTxFrame,
   type TxFrame,
@@ -21,6 +22,7 @@ export class InputClient {
   private ws: WebSocket | null = null;
   private lastFrame: TxFrame | null = null;
   private lastFrameAt = 0;
+  private resetHeld = false;
   private framesThisSecond = 0;
   private hz = 0;
   private rtt = -1;
@@ -104,10 +106,15 @@ export class InputClient {
       }
       const frame = decodeTxFrame(ev.data as ArrayBuffer);
       if (!frame) return;
+      const reset = (frame.flags & FLAG_RESET) !== 0;
       this.lastFrame = frame;
       this.lastFrameAt = performance.now();
       this.framesThisSecond++;
       this.packets++;
+      // The phone holds the reset bit high for ~200 ms. Reset once on the
+      // rising edge; the JSON reset path above remains for good measure.
+      if (reset && !this.resetHeld) this.onDiscreteKey?.('KeyR');
+      this.resetHeld = reset;
     };
     ws.onclose = () => {
       this.link = this.snapshot();
@@ -167,6 +174,7 @@ export class InputClient {
   read(): Inputs {
     const now = performance.now();
     const fresh = this.lastFrame && now - this.lastFrameAt < 250;
+    if (!fresh) this.resetHeld = false;
 
     if (fresh && this.lastFrame) {
       const f = this.lastFrame;

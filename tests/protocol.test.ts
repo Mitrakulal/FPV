@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   FRAME_BYTES,
   FLAG_ARMED,
+  FLAG_RESET,
   decodeTxFrame,
   encodeTxFrame,
   type TxFrame,
@@ -50,4 +51,11 @@ test('extreme axis values survive', () => {
     assert.equal(decoded?.throttle, v);
     assert.equal(decoded?.yaw, v);
   }
+});
+
+test('reset pulse flag survives the wire format', () => {
+  const decoded = decodeTxFrame(
+    encodeTxFrame({ ...base, flags: FLAG_ARMED | FLAG_RESET }),
+  );
+  assert.equal(decoded?.flags, FLAG_ARMED | FLAG_RESET);
 });

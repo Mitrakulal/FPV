@@ -2,6 +2,7 @@ import {
   FLAG_ANGLE,
   FLAG_ARMED,
   FLAG_HOLD,
+  FLAG_RESET,
   encodeTxFrame,
   type TxFrame,
 } from '../../../packages/protocol/protocol';
@@ -170,6 +171,7 @@ const settings = loadSettings();
 let armed = false;
 let angleMode = true;
 let seq = 0;
+let resetPulseUntil = 0;
 let ws: WebSocket | null = null;
 let reconnectTimer: number | null = null;
 let rttMs = -1;
@@ -342,7 +344,8 @@ function currentFrame(): TxFrame {
     flags:
       (armed ? FLAG_ARMED : 0) |
       (angleMode ? FLAG_ANGLE : 0) |
-      (settings.throttle === 'hold' ? FLAG_HOLD : 0),
+      (settings.throttle === 'hold' ? FLAG_HOLD : 0) |
+      (resetPulseUntil > now ? FLAG_RESET : 0),
     mode: settings.mode,
     aux: 0,
   };
@@ -496,9 +499,13 @@ btnRestart.addEventListener('click', () => {
     flash('no link');
     return;
   }
-  // Reset the run on the sim, then disarm so a restart never comes back hot.
+  // Pulse the reset bit in the binary stream so the restart also works with an
+  // older relay that does not forward the JSON reset message. Send both: the
+  // relay path is instant, the binary pulse is the compatibility path.
+  resetPulseUntil = performance.now() + 200;
   ws.send(JSON.stringify({ type: 'reset' }));
   disarm('run restarted');
+  send();
   buzz(30);
   flash('run restarted');
 });

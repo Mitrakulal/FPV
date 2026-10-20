@@ -10,7 +10,8 @@
  *  10  i16  yaw        -1000 = left, +1000 = right
  *  12  i16  pitch      -1000 = nose down, +1000 = nose up
  *  14  i16  roll       -1000 = left, +1000 = right
- *  16  u8   flags      bit0 armed, bit1 angle mode, bit2 throttle hold, bit3 failsafe
+ *  16  u8   flags      bit0 armed, bit1 angle mode, bit2 throttle hold, bit3 failsafe,
+ *                      bit4 reset pulse
  *  17  u8   mode       1 or 2
  *  18  u16  aux        switch bits, reserved
  *  20  u16  crc        simple checksum of bytes 0..19
@@ -27,6 +28,11 @@ export const FLAG_ARMED = 1 << 0;
 export const FLAG_ANGLE = 1 << 1;
 export const FLAG_HOLD = 1 << 2;
 export const FLAG_FAILSAFE = 1 << 3;
+/**
+ * One-shot pulse from the phone's R button. The sim resets on the rising edge,
+ * so restart works even if an older relay does not forward the JSON reset.
+ */
+export const FLAG_RESET = 1 << 4;
 
 export interface TxFrame {
   seq: number;

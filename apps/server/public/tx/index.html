@@ -11,7 +11,7 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>FPV TX</title>
-    <link rel="stylesheet" href="./style.css?v=4" />
+    <link rel="stylesheet" href="./style.css?v=5" />
   </head>
   <body>
     <div id="app">
@@ -20,6 +20,7 @@
         <div class="pill mono" id="rtt">-- ms</div>
         <div class="pill mono" id="rate">-- Hz</div>
         <button id="armBtn" class="arm" type="button">DISARMED</button>
+        <button id="btnRestart" class="danger restart" type="button" aria-label="restart run">R</button>
         <button id="btnAngle" class="ghost" type="button">ACRO</button>
         <button id="btnSettings" class="ghost" type="button" aria-label="settings">SET</button>
         <button id="btnFull" class="ghost" type="button" aria-label="fullscreen">FULL</button>
@@ -57,7 +58,6 @@
 
       <div class="hintbar">
         <span>Throttle holds where you leave it. Arm with throttle low.</span>
-        <button id="btnRestart" class="danger restart" type="button">R · RESTART</button>
       </div>
     </div>
 
@@ -121,6 +121,6 @@
       </div>
     </div>
 
-    <script type="module" src="./tx.js?v=4"></script>
+    <script type="module" src="./tx.js?v=5"></script>
   </body>
 </html>
