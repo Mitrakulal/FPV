@@ -192,8 +192,12 @@ test('angle mode holds the commanded lean and moves forward', () => {
   const input: Inputs = { throttle: 0.5, roll: 0, pitch: -1, yaw: 0, armed: true, angle: true };
   for (let i = 0; i < 2000; i++) s.step(DT, input);
 
+  const lean = (-DEFAULT_PARAMS.angle.maxLean * 180) / Math.PI;
   const pitch = headingPitch(s);
-  assert.ok(Math.abs(pitch + 35) < 2, `leans ${pitch.toFixed(1)}°, expected -35°`);
+  assert.ok(
+    Math.abs(pitch - lean) < 2,
+    `leans ${pitch.toFixed(1)}°, expected ${lean.toFixed(0)}°`,
+  );
   assert.ok(s.state.pos.z < -2, `did not fly forward (z=${s.state.pos.z.toFixed(2)})`);
 });
 
@@ -207,8 +211,12 @@ test('angle mode does not tumble when yawing while pitched', () => {
 
   const up = s.upVector();
   assert.ok(up.y > 0.7, `lost the horizon while yawing (up.y=${up.y.toFixed(2)})`);
+  const lean = (-DEFAULT_PARAMS.angle.maxLean * 180) / Math.PI;
   const pitch = headingPitch(s);
-  assert.ok(pitch > -42 && pitch < -25, `pitch drifted to ${pitch.toFixed(1)}° during yaw`);
+  assert.ok(
+    pitch > lean - 10 && pitch < lean + 10,
+    `pitch drifted to ${pitch.toFixed(1)}° during yaw`,
+  );
 });
 
 test('angle mode levels out without overshooting past level', () => {

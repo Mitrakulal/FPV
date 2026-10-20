@@ -44,8 +44,8 @@ possible but is not part of the current build.
   `adb reverse`; the link never touches Wi-Fi or a router.
 - **Absolute throttle, Mode 1/2, hold/spring** — the default is Mode 2 with HOLD. A training
   mode springs the throttle back to the hover point.
-- **ANGLE and ACRO** — ANGLE is the phone default and self-levels to ±35°; ACRO exposes the
-  full rate-mode model. The top-right button switches between them.
+- **ANGLE and ACRO** — ANGLE is the phone default and self-levels to ±45°; ACRO exposes the
+  full freestyle rate model. The top-right button switches between them.
 - **1 kHz physics** — quaternion rigid body, gyroscopic coupling, linear + quadratic drag,
   motor lag, differential-thrust torque, yaw reaction, battery sag and prop-wash disturbance.
 - **Forgiving contact model** — light bumps bounce and slide; only hard impacts or a
@@ -162,11 +162,11 @@ disarms the transmitter and releases the sticks.
 | Motors | 4 × 12.5 N maximum thrust (50 N total) |
 | Thrust-to-weight | 7.8 : 1 |
 | Hover throttle | ≈ 36% at a full pack |
-| Thrust curve | proportional to throttle², with first-order motor lag (τ = 30 ms) |
-| Rate limits (ACRO) | 600 °/s pitch, 400 °/s yaw, 600 °/s roll |
-| ANGLE mode | ±35° lean, 150 °/s yaw cap, ≈ 0.25 s step response |
+| Thrust curve | proportional to throttle², with first-order motor lag (τ = 20 ms) |
+| Rate limits (ACRO) | 800 °/s pitch, 500 °/s yaw, 800 °/s roll |
+| ANGLE mode | ±45° lean, 250 °/s yaw cap, ≈ 0.2 s step response |
 | Drag | linear 0.05, quadratic 0.012 |
-| Battery | 25.2 V full pack, 3.0 V sag at full load |
+| Battery | 25.2 V full pack, 2.4 V sag at full load |
 | Disturbances | prop wash while descending, angular damping, gyroscopic coupling |
 | Integration | fixed 1 kHz accumulator, quaternion orientation |
 
@@ -181,7 +181,7 @@ unit tests.
 - Per-axis rate limits, with a lower yaw cap in ANGLE so attitude correction cannot be
   outrun by yaw.
 - ANGLE mode uses a heading-relative lean target, a 50 ms target filter, `kp = 4` and a
-  180 °/s correction limit. The result is a predictable step response rather than a snap.
+  260 °/s correction limit. The result is predictable, but quick enough to feel connected.
 - Arming is gated by the phone (throttle below 10%). Link loss and page hide both disarm.
 - A hard crash cuts the motors and leaves the quad where it fell; `R` resets to the start.
 

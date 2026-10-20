@@ -36,7 +36,8 @@ export interface QuadParams {
   yawCoef: number; // prop drag torque per newton
   rateMax: [number, number, number]; // deg/s: pitch, yaw, roll
   pid: { p: number; i: number; d: number };
-  angle: { kp: number; rate: number; tau: number }; // angle-mode response
+  angle: { kp: number; rate: number; tau: number; maxLean: number }; // angle-mode response
+  mixAuth: number; // differential-thrust authority at the mixer
   sagVolts: number;
   packVolts: number;
   turbulence: number; // 0..1
@@ -47,15 +48,23 @@ export const DEFAULT_PARAMS: QuadParams = {
   arm: 0.115,
   inertia: [0.004, 0.008, 0.004],
   maxThrustPerMotor: 12.5,
-  motorTau: 0.03,
+  // A 5" freestyle quad spools almost instantly. 30 ms made the first beat of
+  // a punch or a flip feel soft; 20 ms is closer to a modern 6S build.
+  motorTau: 0.02,
   dragLin: 0.05,
   dragQuad: 0.012,
   angDrag: 0.03,
-  yawCoef: 0.018,
-  rateMax: [600, 400, 600],
-  pid: { p: 0.075, i: 0.55, d: 0.0016 },
-  angle: { kp: 4, rate: 180, tau: 0.05 },
-  sagVolts: 3.0,
+  // More prop-drag yaw torque than the first pass; yaw was the slowest axis.
+  yawCoef: 0.024,
+  // Freestyle rates, not cinematic rates. 800 deg/s is still flyable on the
+  // course but gives the sticks real authority.
+  rateMax: [800, 500, 800],
+  pid: { p: 0.095, i: 0.55, d: 0.0018 },
+  // ANGLE is for cruising, not for feeling dead: 45 deg of lean and a faster
+  // attitude loop. Yaw stays capped below the lean rate so the horizon is safe.
+  angle: { kp: 4, rate: 260, tau: 0.05, maxLean: (45 * Math.PI) / 180 },
+  mixAuth: 0.65,
+  sagVolts: 2.4,
   packVolts: 25.2,
   turbulence: 0.35,
 };
@@ -185,8 +194,8 @@ export class QuadSim {
     }
 
     // ---- rate setpoints -------------------------------------------------
-    let setPitch = clamp(input.angle ? input.pitch * 35 * DEG : input.pitch, -1, 1);
-    let setRoll = clamp(input.angle ? input.roll * 35 * DEG : input.roll, -1, 1);
+    let setPitch = clamp(input.angle ? input.pitch * p.angle.maxLean : input.pitch, -1, 1);
+    let setRoll = clamp(input.angle ? input.roll * p.angle.maxLean : input.roll, -1, 1);
 
     let targetPitch: number;
     let targetYaw: number;
@@ -220,7 +229,7 @@ export class QuadSim {
       targetRoll = clamp((-this.angleTargetRoll - rollRel) * p.angle.kp, -1, 1) * angleRate;
       // In angle mode a full-rate yaw would outrun the attitude correction
       // (yawing while pitched redistributes pitch into roll), so cap it.
-      targetYaw = -input.yaw * Math.min(150, p.rateMax[1]) * DEG;
+      targetYaw = -input.yaw * Math.min(250, p.rateMax[1]) * DEG;
     } else {
       targetPitch = setPitch * p.rateMax[0] * DEG; // + = nose up
       targetYaw = -input.yaw * p.rateMax[1] * DEG; // + stick = nose right
@@ -254,7 +263,7 @@ export class QuadSim {
     // uPitch + = nose up, uRoll + = roll left, uYaw + = nose left, matching tau.
     const thr = input.armed ? clamp(input.throttle, 0, 1) : 0;
     const base = thr * thr; // thrust ~ rpm^2 -> hover near 35% throttle
-    const AUTH = 0.55;
+    const AUTH = p.mixAuth;
     const mix = [
       base + AUTH * (uPitch + uRoll - uYaw), // 0 FR (CCW)
       base + AUTH * (uPitch - uRoll + uYaw), // 1 FL (CW)

@@ -133,12 +133,12 @@ and the quaternion is advanced with `q̇ = 0.5 * q * (0, ω)` followed by normal
 ### Motors and mixer
 
 - Commanded motor values are clamped to `0…1`, mixed from throttle and the three PID
-  outputs, and passed through a first-order lag with `τ = 30 ms`.
+  outputs, and passed through a first-order lag with `τ = 20 ms`.
 - Thrust per motor is `Tmax * motor²`, i.e. proportional to RPM squared.
 - Differential thrust produces pitch and roll torque through the 115 mm arm; motor reaction
   torque produces yaw through the `yawCoef` term.
-- The mixer authority is 0.55, leaving headroom for attitude control at high throttle.
-- Battery voltage droops with load (`25.2 V - 3.0 V * load`), and thrust scales with the
+- The mixer authority is 0.65, leaving headroom for attitude control at high throttle.
+- Battery voltage droops with load (`25.2 V - 2.4 V * load`), and thrust scales with the
   square of the voltage ratio.
 - Descending faster than 2.5 m/s injects a speed-scaled prop-wash disturbance into the motor
   outputs. It is deterministic noise, not a random walk, so the model stays repeatable.
@@ -157,12 +157,12 @@ derivative = -(measured rate - previous measured rate) / dt
 u        = clamp(kp * err + ki * integral + kd * derivative, -1, 1)
 ```
 
-Defaults: `kp = 0.075`, `ki = 0.55`, `kd = 0.0016`; yaw gains are scaled by 1.6 and 1.4.
+Defaults: `kp = 0.095`, `ki = 0.55`, `kd = 0.0018`; yaw gains are scaled by 1.6 and 1.4.
 The derivative is taken from the measurement rather than the error, avoiding a kick when
 the setpoint moves.
 
-ACRO maps stick position directly to a body-rate setpoint: 600 °/s pitch, 400 °/s yaw and
-600 °/s roll. ANGLE maps it to a lean angle and lets the controller generate the rate.
+ACRO maps stick position directly to a body-rate setpoint: 800 °/s pitch, 500 °/s yaw and
+800 °/s roll. ANGLE maps it to a lean angle and lets the controller generate the rate.
 
 ### ANGLE mode
 
@@ -172,10 +172,10 @@ misbehave when the aircraft is yawing while pitched. Instead:
 1. Compute the heading from the projection of the forward vector onto the horizontal plane.
 2. Project the up vector onto the heading frame to obtain heading-relative pitch and roll.
 3. Smooth the *target* lean, not the measured lean, with a 50 ms filter.
-4. Run a proportional attitude loop with `kp = 4`, limited to 180 °/s.
-5. Cap yaw at 150 °/s so the attitude correction cannot be outrun.
+4. Run a proportional attitude loop with `kp = 4`, limited to 260 °/s and ±45° of lean.
+5. Cap yaw at 250 °/s so the attitude correction cannot be outrun.
 
-The step response settles in roughly 0.25 s with about 0.2° of overshoot.
+The step response settles in roughly 0.2 s with under 0.5° of overshoot.
 
 ### Ground and obstacles
 
