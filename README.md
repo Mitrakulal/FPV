@@ -32,7 +32,7 @@ maps that port back to the laptop, so the traffic never touches WiFi or the rout
 No phone handy? The sim is playable on the keyboard:
 `W/S` throttle · `A/D` yaw · arrows pitch/roll · `Space` arm · `R` restart · `C` chase view ·
 `[` `]` camera tilt · `V` analog look · `M` mute. The phone has the same thing as the
-**R · RESTART** button in the middle of the transmitter screen.
+**R · RESTART** button at the bottom of the transmitter screen.
 
 No auto-respawn: a hard crash leaves the quad where it fell (and cuts the motors) until you
 press `R`, which puts you back on the start line. Light knocks are not crashes — a 10 m drop,
@@ -100,7 +100,7 @@ docs/PLAN.md   the full plan and phase list
 ## Tests
 
 ```bat
-npm test          :: physics + protocol (15 assertions)
+npm test          :: physics + protocol (23 tests)
 node tools/smoke.ts      :: server up, pages served, 250 Hz frames arrive (server must run)
 node tools/tx-test.mjs   :: touch drag, throttle hold, arm guard (server must run)
 node tools/screenshot.mjs :: headless render check + screenshots in scratch\
