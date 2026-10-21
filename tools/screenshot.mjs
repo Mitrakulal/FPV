@@ -5,6 +5,7 @@
 import puppeteer from 'puppeteer-core';
 
 const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const BASE = 'http://127.0.0.1:8091';
 
 const browser = await puppeteer.launch({
   executablePath: CHROME,
@@ -27,23 +28,27 @@ function watch(page, label) {
   page.on('requestfailed', (r) => errors.push(`${label} requestfailed: ${r.url()}`));
 }
 
-// --- sim, parked -----------------------------------------------------------
+// --- menu ---------------------------------------------------------------
 const page = await browser.newPage();
 watch(page, 'sim');
 await page.setViewport({ width: 1280, height: 720 });
-await page.goto('http://127.0.0.1:8080/sim/', { waitUntil: 'networkidle0', timeout: 30000 });
+await page.goto(`${BASE}/sim/`, { waitUntil: 'networkidle0', timeout: 60000 });
 await new Promise((r) => setTimeout(r, 2500));
-await page.screenshot({ path: 'scratch/sim-grounded.png' });
+await page.screenshot({ path: 'scratch/sim-menu.png' });
 
-// --- sim, flying (keyboard arm + throttle) --------------------------------
+// --- airfield, flying ---------------------------------------------------
+await page.goto(`${BASE}/sim/?map=airfield&alt=2.5`, { waitUntil: 'networkidle0', timeout: 60000 });
+await new Promise((r) => setTimeout(r, 1200));
 await page.keyboard.press('Space');
 await page.keyboard.down('KeyW');
 await new Promise((r) => setTimeout(r, 900));
 await page.keyboard.up('KeyW');
 await new Promise((r) => setTimeout(r, 800));
-await page.screenshot({ path: 'scratch/sim-flying.png' });
+await page.screenshot({ path: 'scratch/sim-airfield-flying.png' });
 
-const stats = await page.evaluate(() => ({
+const airfieldStats = await page.evaluate(() => ({
+  map: document.getElementById('mapName')?.textContent,
+  progress: document.getElementById('progress')?.textContent,
   fps: document.getElementById('fps')?.textContent,
   frameMs: document.getElementById('frameMs')?.textContent,
   tickRate: document.getElementById('tickRate')?.textContent,
@@ -53,11 +58,23 @@ const stats = await page.evaluate(() => ({
   banner: document.getElementById('banner')?.hidden ? '' : document.getElementById('banner')?.textContent,
 }));
 
-// --- transmitter page ------------------------------------------------------
+// --- indoor overview ----------------------------------------------------
+await page.goto(`${BASE}/sim/?map=indoor&view=overview`, { waitUntil: 'networkidle0', timeout: 60000 });
+await new Promise((r) => setTimeout(r, 2500));
+await page.screenshot({ path: 'scratch/sim-indoor-overview.png' });
+
+const indoorStats = await page.evaluate(() => ({
+  map: document.getElementById('mapName')?.textContent,
+  progress: document.getElementById('progress')?.textContent,
+  fps: document.getElementById('fps')?.textContent,
+  frameMs: document.getElementById('frameMs')?.textContent,
+}));
+
+// --- transmitter page ----------------------------------------------------
 const tx = await browser.newPage();
 watch(tx, 'tx');
 await tx.setViewport({ width: 960, height: 460, isMobile: true, hasTouch: true });
-await tx.goto('http://127.0.0.1:8080/tx/', { waitUntil: 'networkidle0', timeout: 30000 });
+await tx.goto(`${BASE}/tx/`, { waitUntil: 'networkidle0', timeout: 60000 });
 await new Promise((r) => setTimeout(r, 1200));
 await tx.screenshot({ path: 'scratch/tx.png' });
 
@@ -68,7 +85,8 @@ const txStats = await tx.evaluate(() => ({
   twoSticks: document.querySelectorAll('.stick').length,
 }));
 
-console.log('sim:', stats);
+console.log('airfield:', airfieldStats);
+console.log('indoor:', indoorStats);
 console.log('tx :', txStats);
 console.log(errors.length ? `ERRORS:\n${errors.join('\n')}` : 'no runtime errors');
 

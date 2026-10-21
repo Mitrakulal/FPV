@@ -11,7 +11,7 @@ what is being tuned, and what comes next.
 | 1 | Phone transmitter, throttle hold, arm, failsafe, persisted settings | Complete |
 | 2 | Flight model, airfield, cameras, crash and restart | Complete |
 | 3 | Feel tuning with a real pilot; air mode; in-sim tuning panel | In progress |
-| 4 | Gate timing, splits, laps, ghost | Planned |
+| 4 | Indoor start-to-finish training course, portal progress, ramps | Complete |
 | 5 | Visual and performance polish, OSD refinements | In progress |
 | 6 | Optional virtual-gamepad bridge for third-party sims | Exploratory |
 
@@ -21,8 +21,8 @@ what is being tuned, and what comes next.
    stick. This is the largest remaining behavior gap versus a real 5-inch quad.
 2. **In-sim tuning panel.** Rates, PID gains, camera tilt, expo and trim, persisted per
    pilot. The physics parameters are already centralized in `DEFAULT_PARAMS`.
-3. **Gate timing and laps.** Start/finish trigger, per-gate splits, best-lap storage and a
-   ghost replay that uses the recorded state stream.
+3. **Map and camera polish.** Start menu previews, map switching and overview cameras for both
+   worlds.
 4. **Visual polish.** Near-field asphalt detail, runway and gate scale, distant grass,
    warehouse materials, tyre walls and pallet stacks.
 5. **Camera and audio polish.** More tilt range, a cleaner analog mode, RPM/ wind audio
@@ -31,7 +31,7 @@ what is being tuned, and what comes next.
 ## Current limitations
 
 - Air mode is not implemented.
-- No lap timer, ghost or session statistics.
+- No lap timer, ghost or session statistics; the indoor course uses untimed portal progress.
 - No in-sim rates/PID/camera panel.
 - The launcher and ADB helper are Windows-specific.
 - No multiplayer, cloud hosting or native mobile app.

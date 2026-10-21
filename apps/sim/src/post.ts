@@ -259,4 +259,21 @@ export class PostFX {
     const mat = this.extract.material as THREE.ShaderMaterial;
     mat.uniforms.uThreshold!.value = v;
   }
+
+  /** Switch the whole look instantly, used when swapping maps. */
+  setGrade(grade: {
+    bloomThreshold: number;
+    bloom: number;
+    exposure: number;
+    vignette: number;
+    grain: number;
+  }): void {
+    const extract = this.extract.material as THREE.ShaderMaterial;
+    extract.uniforms.uThreshold!.value = grade.bloomThreshold;
+    const finalMat = this.final.material as THREE.ShaderMaterial;
+    finalMat.uniforms.uBloom!.value = grade.bloom;
+    finalMat.uniforms.uExposure!.value = grade.exposure;
+    finalMat.uniforms.uVignette!.value = grade.vignette;
+    finalMat.uniforms.uGrain!.value = grade.grain;
+  }
 }

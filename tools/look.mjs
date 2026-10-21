@@ -1,10 +1,11 @@
 /**
- * Dev eyeball shots: overview, eye level, chase.
+ * Dev eyeball shots: menu, both maps, overview, eye level, chase.
  * Usage: node tools/look.mjs
  */
 import puppeteer from 'puppeteer-core';
 
 const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const BASE = 'http://127.0.0.1:8091';
 
 const browser = await puppeteer.launch({
   executablePath: CHROME,
@@ -22,18 +23,24 @@ page.on('requestfailed', (r) => errors.push(`requestfailed: ${r.url()}`));
 await page.setViewport({ width: 1280, height: 720 });
 
 const shots = [
-  ['overview', '/sim/?view=overview'],
-  ['eye', '/sim/?alt=2.5'],
-  ['chase', '/sim/?alt=3&view=chase'],
+  ['menu', '/sim/'],
+  ['airfield-overview', '/sim/?map=airfield&view=overview'],
+  ['airfield-eye', '/sim/?map=airfield&alt=2.5'],
+  ['airfield-chase', '/sim/?map=airfield&alt=3&view=chase'],
+  ['indoor-overview', '/sim/?map=indoor&view=overview'],
+  ['indoor-eye', '/sim/?map=indoor'],
+  ['indoor-chase', '/sim/?map=indoor&view=chase&alt=2'],
 ];
 
 for (const [name, url] of shots) {
-  await page.goto(`http://127.0.0.1:8080${url}`, { waitUntil: 'networkidle0', timeout: 60000 });
+  await page.goto(`${BASE}${url}`, { waitUntil: 'networkidle0', timeout: 60000 });
   await new Promise((r) => setTimeout(r, 2500));
   await page.screenshot({ path: `scratch/${name}.png` });
 }
 
 const stats = await page.evaluate(() => ({
+  map: document.getElementById('mapName')?.textContent,
+  progress: document.getElementById('progress')?.textContent,
   fps: document.getElementById('fps')?.textContent,
   frameMs: document.getElementById('frameMs')?.textContent,
 }));

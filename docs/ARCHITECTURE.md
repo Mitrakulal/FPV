@@ -212,9 +212,12 @@ start line.
 - FPV camera sits at the body centre with a configurable tilt (24° default, 0–60°) and a
   speed-dependent FOV widening. The chase camera is spring-damped. An overview camera is
   available for debugging and screenshots.
-- The scene is a 100 m × 400 m asphalt strip with a warehouse, containers, tyre stacks,
-  pallets, barrels, poles, trees, a windsock and five gates. Colliders are simple boxes
-  derived from the props, not triangle meshes.
+- The sim ships two worlds that are both built at startup and switched instantly from the
+  start menu: an outdoor airfield plus skate park, and an indoor start-to-finish course.
+  The outdoor world is a 100 m × 400 m asphalt strip with a warehouse, containers, tyre
+  stacks, pallets, barrels, poles, trees, a windsock, five gates and a skate park. The indoor
+  world is a 32 m × 118 m tesseract-clad course with six portals, three ramps, a mezzanine
+  and an end deck. Colliders are simple boxes derived from the props, not triangle meshes.
 
 ## Latency
 
@@ -270,7 +273,9 @@ small mistakes while hard impacts still matter.
   and attitude control fades; a real quad in air mode keeps authority.
 - The rate/PID/camera/trim tuning panel is not in the sim yet; the current parameters are
   compile-time defaults.
-- There is no lap timer, split, ghost or session statistics.
+- The indoor course is linear and untimed: portal crossings advance a progress HUD, and the
+  next opening glows while completed ones fade. There is no lap timer, split, ghost or
+  session statistics.
 - The course and props are static; there is no object interaction beyond the box colliders.
 - The Windows scripts are the supported launcher path. Linux/macOS users can run the Node
   server and use `adb reverse` manually.

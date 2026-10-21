@@ -332,3 +332,120 @@ export function gateNumberTexture(n: number, accent: string): THREE.CanvasTextur
     g.fillText(String(n), w / 2, h / 2 + 4);
   });
 }
+
+function seeded(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+}
+
+/**
+ * The indoor facility's tesseract cladding: a dark bronze grid of lit cells.
+ * It reads as depth at speed without adding geometry or another draw call.
+ */
+export function tesseractWallTexture(repeatX = 4, repeatY = 2): THREE.CanvasTexture {
+  return canvasTexture(
+    512,
+    512,
+    (g, w, h) => {
+      const r = seeded(19);
+      const bg = g.createLinearGradient(0, 0, 0, h);
+      bg.addColorStop(0, '#15181d');
+      bg.addColorStop(0.55, '#0c0e12');
+      bg.addColorStop(1, '#17130f');
+      g.fillStyle = bg;
+      g.fillRect(0, 0, w, h);
+
+      const cols = 8;
+      const rows = 8;
+      const cw = w / cols;
+      const ch = h / rows;
+
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const px = x * cw;
+          const py = y * ch;
+          const lit = r();
+          const warm = 0.35 + r() * 0.65;
+
+          g.fillStyle = `rgba(58, 44, 30, ${0.12 + lit * 0.2})`;
+          g.fillRect(px + 3, py + 3, cw - 6, ch - 6);
+
+          // vertical book-slot ribs, the repeating tesseract motif
+          g.fillStyle = lit > 0.58 ? `rgba(255, 154, 79, ${0.24 + warm * 0.38})` : 'rgba(71, 85, 96, 0.24)';
+          g.fillRect(px + cw * 0.48, py + 7, 1.6, ch - 14);
+          g.fillStyle = lit > 0.78 ? 'rgba(255, 195, 123, 0.42)' : 'rgba(25, 29, 34, 0.5)';
+          g.fillRect(px + cw * 0.68, py + 10, 1, ch - 20);
+
+          g.strokeStyle = `rgba(255, 171, 101, ${0.12 + lit * 0.34})`;
+          g.lineWidth = 1.1;
+          g.strokeRect(px + 3.5, py + 3.5, cw - 7, ch - 7);
+        }
+      }
+
+      // horizontal structural bands
+      for (let y = 0; y <= rows; y++) {
+        g.fillStyle = 'rgba(8, 9, 11, 0.75)';
+        g.fillRect(0, y * ch - 3, w, 6);
+        g.fillStyle = 'rgba(255, 177, 105, 0.12)';
+        g.fillRect(0, y * ch + 3, w, 1);
+      }
+      for (let x = 0; x <= cols; x++) {
+        g.fillStyle = 'rgba(6, 7, 9, 0.65)';
+        g.fillRect(x * cw - 2, 0, 4, h);
+      }
+
+      for (let i = 0; i < 70; i++) {
+        g.fillStyle = `rgba(255, 145, 76, ${r() * 0.055})`;
+        g.fillRect(r() * w, r() * h, 1 + r() * 30, 1);
+      }
+    },
+    [repeatX, repeatY],
+  );
+}
+
+/** Glowing number plate used above the training portals. */
+export function trainingNumberTexture(n: number, accent: string): THREE.CanvasTexture {
+  return canvasTexture(256, 128, (g, w, h) => {
+    g.clearRect(0, 0, w, h);
+    g.fillStyle = 'rgba(5, 7, 9, 0.82)';
+    g.fillRect(0, 0, w, h);
+    g.strokeStyle = accent;
+    g.lineWidth = 8;
+    g.strokeRect(4, 4, w - 8, h - 8);
+    g.fillStyle = accent;
+    g.font = 'bold 82px "Segoe UI", Arial, sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(String(n).padStart(2, '0'), w / 2, h / 2 + 5);
+  });
+}
+
+/**
+ * Transparent wall / floor stencil. Used for arrows and the big room labels,
+ * so a beginner can read the route without a minimap.
+ */
+export function routeStencilTexture(text: string, accent: string, sub = ''): THREE.CanvasTexture {
+  return canvasTexture(512, 256, (g, w, h) => {
+    g.clearRect(0, 0, w, h);
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+
+    g.fillStyle = accent;
+    g.font = 'bold 148px "Segoe UI", Arial, sans-serif';
+    g.fillText(text, w / 2, h * 0.43);
+
+    g.fillStyle = accent;
+    g.globalAlpha = 0.7;
+    g.fillRect(w * 0.18, h * 0.68, w * 0.64, 5);
+    g.globalAlpha = 1;
+
+    if (sub) {
+      g.fillStyle = '#e8e2d6';
+      g.font = '600 36px "Segoe UI", Arial, sans-serif';
+      g.fillText(sub, w / 2, h * 0.82);
+    }
+  });
+}

@@ -3,7 +3,9 @@ import { Assets } from './assets';
 import { QuadSim, DEFAULT_PARAMS } from './physics';
 import { InputClient } from './input';
 import { buildWorld } from './scene';
+import { buildIndoorWorld } from './indoor';
 import { PostFX } from './post';
+import type { World, WorldKind } from './world';
 
 const canvas = document.getElementById('view') as HTMLCanvasElement;
 
@@ -31,14 +33,21 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 const assets = new Assets();
 await assets.load(renderer);
 
-const world = await buildWorld(renderer, assets);
+const [airfield, indoor] = await Promise.all([
+  buildWorld(renderer, assets),
+  buildIndoorWorld(renderer, assets),
+]);
+const worlds: Record<WorldKind, World> = { airfield, indoor };
+let activeWorld: World = airfield;
+let activeKind: WorldKind = 'airfield';
+
 const camera = new THREE.PerspectiveCamera(86, window.innerWidth / window.innerHeight, 0.03, 520);
 camera.up.set(0, 1, 0);
 
 const post = new PostFX(renderer);
+post.setGrade(activeWorld.grade);
 
 const sim = new QuadSim(DEFAULT_PARAMS);
-sim.colliders = world.colliders;
 
 let camTilt = (24 * Math.PI) / 180;
 let chase = false;
@@ -47,40 +56,115 @@ let analog = false;
 let analogMix = 0;
 let muted = false;
 let wasCrashed = false;
-let flightMs = 0;
 let flash = 0;
+let menuOpen = true;
+let sessionStarted = false;
+let courseComplete = false;
 
 const input = new InputClient((code) => onKey(code));
 
 const urlParams = new URLSearchParams(location.search);
-if (urlParams.has('alt')) {
-  sim.state.pos.y = Math.max(0.05, Number(urlParams.get('alt')) || 0);
-}
-overview = urlParams.get('view') === 'overview';
-if (urlParams.get('view') === 'chase') chase = true;
 const lookParam = urlParams.get('look');
 const debugLook = lookParam ? lookParam.split(',').map(Number) : null;
 
+function setWorld(kind: WorldKind): void {
+  const next = worlds[kind];
+  activeWorld = next;
+  activeKind = kind;
+  sim.spawn = { ...next.spawn };
+  sim.colliders = next.colliders;
+  sim.ramps = next.ramps;
+  sim.platforms = next.platforms;
+  sim.reset();
+  next.training?.reset();
+  sim.state.quat = { x: 0, y: 0, z: 0, w: 1 };
+  post.setGrade(next.grade);
+  chasePos.set(next.spawn.x, next.spawn.y + 2, next.spawn.z + 6);
+  courseComplete = false;
+  wasCrashed = false;
+  flash = 0;
+  setBanner(null);
+}
+
+function startMode(kind: WorldKind, fromUrl = false): void {
+  setWorld(kind);
+  sessionStarted = true;
+  menuOpen = false;
+  menuEl.hidden = true;
+  document.body.classList.remove('menu-open');
+  accumulator = 0;
+  last = performance.now();
+  input.disarmKeyboard();
+  chase = false;
+  overview = false;
+  camTilt = (24 * Math.PI) / 180;
+
+  if (fromUrl) {
+    overview = urlParams.get('view') === 'overview';
+    if (urlParams.get('view') === 'chase') chase = true;
+    const alt = Number(urlParams.get('alt'));
+    if (urlParams.has('alt') && Number.isFinite(alt)) sim.state.pos.y = Math.max(0.05, alt);
+  }
+  setBanner(null);
+}
+
+function openMenu(fromFlight: boolean): void {
+  menuOpen = true;
+  menuEl.hidden = false;
+  document.body.classList.add('menu-open');
+  resumeBtn.hidden = !fromFlight || !sessionStarted;
+  resumeBtn.textContent = activeKind === 'indoor' ? 'RESUME TRAINING' : 'RESUME FLIGHT';
+  input.disarmKeyboard();
+  accumulator = 0;
+  setBanner(null);
+}
+
+function resumeSession(): void {
+  if (!sessionStarted) return;
+  menuOpen = false;
+  menuEl.hidden = true;
+  document.body.classList.remove('menu-open');
+  last = performance.now();
+  accumulator = 0;
+  input.disarmKeyboard();
+}
+
+function reset() {
+  sim.reset();
+  activeWorld.training?.reset();
+  courseComplete = false;
+  wasCrashed = false;
+  input.disarmKeyboard();
+  setBanner(null);
+  flash = 0;
+}
+
 function onKey(code: string) {
+  if (code === 'KeyM') muted = !muted;
+
+  if (menuOpen) {
+    if (code === 'Digit1') startMode('airfield');
+    else if (code === 'Digit2') startMode('indoor');
+    else if (code === 'Escape' && sessionStarted) resumeSession();
+    audio.ensure();
+    return;
+  }
+
+  if (code === 'Escape') {
+    openMenu(true);
+    audio.ensure();
+    return;
+  }
+
   if (code === 'KeyR') reset();
   else if (code === 'KeyC') chase = !chase;
   else if (code === 'KeyO') overview = !overview;
   else if (code === 'KeyV') setAnalog(!analog);
-  else if (code === 'KeyM') muted = !muted;
   else if (code === 'Space') input.toggleArm();
   else if (code === 'BracketLeft') camTilt = Math.max(0, camTilt - (5 * Math.PI) / 180);
   else if (code === 'BracketRight') camTilt = Math.min((60 * Math.PI) / 180, camTilt + (5 * Math.PI) / 180);
   else if (code === 'KeyH') hud.help.hidden = !hud.help.hidden;
   audio.ensure();
-}
-
-function reset() {
-  sim.reset();
-  flightMs = 0;
-  wasCrashed = false;
-  input.disarmKeyboard();
-  setBanner(null);
-  flash = 0;
 }
 
 // ---------------------------------------------------------------- audio
@@ -171,6 +255,27 @@ class MotorAudio {
       this.windGain.gain.setTargetAtTime(muted ? 0 : wind, this.ctx.currentTime, 0.15);
     }
   }
+
+  /** Small confirmation note when a training portal is cleared. */
+  chime(finish = false): void {
+    if (!this.ctx || muted) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const notes = finish ? [660, 880, 1320] : [740, 1110];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + i * 0.075);
+      g.gain.setValueAtTime(0, t + i * 0.075);
+      g.gain.linearRampToValueAtTime(0.055, t + i * 0.075 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.075 + 0.24);
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.start(t + i * 0.075);
+      osc.stop(t + i * 0.075 + 0.26);
+    });
+  }
 }
 const audio = new MotorAudio();
 
@@ -199,7 +304,8 @@ const hud = {
   spd: el<HTMLSpanElement>('spd'),
   volts: el<HTMLSpanElement>('volts'),
   tilt: el<HTMLSpanElement>('tilt'),
-  timer: el<HTMLSpanElement>('timer'),
+  progress: el<HTMLSpanElement>('progress'),
+  mapName: el<HTMLSpanElement>('mapName'),
   armPill: el<HTMLDivElement>('armPill'),
   modePill: el<HTMLDivElement>('modePill'),
   banner: el<HTMLDivElement>('banner'),
@@ -208,6 +314,19 @@ const hud = {
   help: el<HTMLDivElement>('help'),
   boot: el<HTMLDivElement>('boot'),
 };
+
+const menuEl = el<HTMLDivElement>('menu');
+const resumeBtn = el<HTMLButtonElement>('resumeBtn');
+const mapBtn = el<HTMLButtonElement>('mapBtn');
+
+for (const button of document.querySelectorAll<HTMLButtonElement>('[data-map]')) {
+  button.addEventListener('click', () => {
+    const map = button.dataset.map;
+    if (map === 'airfield' || map === 'indoor') startMode(map);
+  });
+}
+resumeBtn.addEventListener('click', () => resumeSession());
+mapBtn.addEventListener('click', () => openMenu(true));
 
 function setBanner(text: string | null, kind: 'lost' | 'crashed' | null = null) {
   if (!text) {
@@ -249,7 +368,7 @@ const propPhase = [0, 0, 0, 0];
 
 function syncQuadVisual() {
   const s = sim.state;
-  const q = world.quad.group;
+  const q = activeWorld.quad.group;
   q.position.set(s.pos.x, s.pos.y, s.pos.z);
   q.quaternion.set(s.quat.x, s.quat.y, s.quat.z, s.quat.w);
 }
@@ -270,7 +389,7 @@ function updateCamera(dt: number, now: number) {
     camera.updateProjectionMatrix();
   }
 
-  world.quad.group.visible = chase || overview;
+  activeWorld.quad.group.visible = chase || overview;
 
   if (debugLook && debugLook.length >= 6) {
     camera.position.set(debugLook[0]!, debugLook[1]!, debugLook[2]!);
@@ -279,8 +398,10 @@ function updateCamera(dt: number, now: number) {
   }
 
   if (overview) {
-    camera.position.set(0, 36, 30);
-    camera.lookAt(0, 0, -28);
+    const [x, y, z] = activeWorld.overview.pos;
+    const [lx, ly, lz] = activeWorld.overview.look;
+    camera.position.set(x, y, z);
+    camera.lookAt(lx, ly, lz);
     return;
   }
 
@@ -314,6 +435,20 @@ function updateCamera(dt: number, now: number) {
   camera.rotateZ(Math.sin(t * 4.7) * wobble * 0.25);
 }
 
+function updateMenuCamera(now: number) {
+  activeWorld.quad.group.visible = true;
+  if (debugLook && debugLook.length >= 6) {
+    camera.position.set(debugLook[0]!, debugLook[1]!, debugLook[2]!);
+    camera.lookAt(debugLook[3]!, debugLook[4]!, debugLook[5]!);
+    return;
+  }
+  const [x, y, z] = activeWorld.overview.pos;
+  const [lx, ly, lz] = activeWorld.overview.look;
+  const drift = now * 0.00004;
+  camera.position.set(x + Math.sin(drift) * 5, y, z + Math.cos(drift) * 5);
+  camera.lookAt(lx, ly, lz);
+}
+
 function updateHud(now: number) {
   const link = input.link;
   const s = sim.state;
@@ -342,9 +477,12 @@ function updateHud(now: number) {
   hud.volts.textContent = s.voltage.toFixed(1);
   hud.tilt.textContent = `${Math.round(sim.tilt() * DEG)}°`;
 
-  const mm = Math.floor(flightMs / 60000);
-  const ss = ((flightMs % 60000) / 1000).toFixed(1).padStart(4, '0');
-  hud.timer.textContent = `${mm}:${ss}`;
+  hud.progress.textContent = courseComplete
+    ? 'COURSE COMPLETE'
+    : activeWorld.training
+      ? activeWorld.training.progressText()
+      : 'FREE FLIGHT';
+  hud.mapName.textContent = activeWorld.label;
 
   hud.armPill.textContent = armed ? 'ARMED' : 'DISARMED';
   hud.armPill.classList.toggle('armed', armed);
@@ -355,6 +493,8 @@ function updateHud(now: number) {
 
   if (sim.state.crashed) {
     setBanner('CRASHED · R to restart from the start', 'crashed');
+  } else if (courseComplete) {
+    setBanner('COURSE COMPLETE · R to fly again', null);
   } else if (!link.fresh && link.packets > 0) {
     setBanner('LINK LOST · motors cut', 'lost');
   } else if (!link.fresh && link.packets === 0 && now - bootAt < 8000) {
@@ -380,21 +520,22 @@ function frame(now: number) {
   frameEma = frameEma * 0.9 + rawDt * 1000 * 0.1;
 
   input.update(dt);
-  accumulator += dt;
-  let steps = 0;
-  const limitTicks = 400;
-  while (accumulator >= TICK && steps < limitTicks) {
-    sim.step(TICK, input.read());
-    accumulator -= TICK;
-    steps++;
-    tickCounter++;
+  if (!menuOpen) {
+    accumulator += dt;
+    let steps = 0;
+    const limitTicks = 400;
+    while (accumulator >= TICK && steps < limitTicks) {
+      sim.step(TICK, input.read());
+      accumulator -= TICK;
+      steps++;
+      tickCounter++;
+    }
+    if (steps >= limitTicks) accumulator = 0; // never spiral
+  } else {
+    accumulator = 0;
   }
-  if (steps >= limitTicks) accumulator = 0; // never spiral
 
-  const armed = sim.state.motors.some((m) => m > 0.01);
-  if (armed && !sim.state.crashed) {
-    flightMs += dt * 1000;
-  }
+  const armed = !menuOpen && sim.state.motors.some((m) => m > 0.01);
 
   if (sim.state.crashed && !wasCrashed) {
     flash = 0.55;
@@ -402,23 +543,34 @@ function frame(now: number) {
   wasCrashed = sim.state.crashed;
 
   syncQuadVisual();
-  updateCamera(dt, now);
+  if (menuOpen) updateMenuCamera(now);
+  else updateCamera(dt, now);
+
+  if (!menuOpen && activeWorld.training && !courseComplete && !sim.state.crashed) {
+    tmpV.set(sim.state.pos.x, sim.state.pos.y, sim.state.pos.z);
+    const result = activeWorld.training.update(tmpV, now);
+    if (result.passed) {
+      flash = Math.max(flash, 0.07);
+      audio.chime(result.complete);
+    }
+    if (result.complete) courseComplete = true;
+  }
 
   // props + motion discs
   const level = sim.state.motors.reduce((a, b) => a + b, 0) / 4;
-  for (let i = 0; i < world.quad.propGroups.length; i++) {
-    const g = world.quad.propGroups[i];
+  for (let i = 0; i < activeWorld.quad.propGroups.length; i++) {
+    const g = activeWorld.quad.propGroups[i];
     if (!g) continue;
     propPhase[i] = (propPhase[i] ?? 0) + dt * (4 + level * 62) * (i % 2 === 0 ? 1 : -1);
     g.rotation.y = propPhase[i] ?? 0;
-    const disc = world.quad.discs[i];
+    const disc = activeWorld.quad.discs[i];
     if (disc) {
       (disc.material as THREE.MeshBasicMaterial).opacity = Math.max(0, (level - 0.05) * 0.5);
     }
   }
 
   audio.update(level, armed, Math.hypot(sim.state.vel.x, sim.state.vel.y, sim.state.vel.z));
-  world.dust.rotation.y += dt * 0.008;
+  activeWorld.dust.rotation.y += dt * 0.008;
   analogMix += ((analog ? 1 : 0) - analogMix) * (1 - Math.exp(-dt * 7));
   flash = Math.max(0, flash - dt * 1.6);
 
@@ -441,7 +593,7 @@ function frame(now: number) {
   const blurAmount = Math.min(0.006, wm * 0.0014);
 
   post.render(
-    world.scene,
+    activeWorld.scene,
     camera,
     { blurDir, blurAmount, analog: analogMix, flash },
     now * 0.001,
@@ -467,9 +619,11 @@ function adaptQuality() {
   } else if (qualityStage === 1) {
     qualityStage = 2;
     qualityScale = 0.7;
-    world.sun.shadow.mapSize.set(1024, 1024);
-    world.sun.shadow.map?.dispose();
-    if (world.sun.shadow.map) world.sun.shadow.map = null;
+    for (const next of Object.values(worlds)) {
+      next.sun.shadow.mapSize.set(1024, 1024);
+      next.sun.shadow.map?.dispose();
+      if (next.sun.shadow.map) next.sun.shadow.map = null;
+    }
     applySize();
   }
 }
@@ -499,7 +653,9 @@ setTimeout(() => hud.boot.remove(), 700);
 // handy for poking at the sim from the devtools console
 (window as unknown as { fpv: unknown }).fpv = {
   renderer,
-  world,
+  world: activeWorld,
+  worlds,
+  activeWorld: () => activeWorld,
   sim,
   camera,
   post,
@@ -507,6 +663,13 @@ setTimeout(() => hud.boot.remove(), 700);
   quality: () => ({ qualityScale, qualityStage, dpr: renderer.getPixelRatio(), fpsEma }),
 };
 (window as unknown as { THREE: unknown }).THREE = THREE;
+
+const startMap = urlParams.get('map');
+if (startMap === 'airfield' || startMap === 'indoor') {
+  startMode(startMap, true);
+} else {
+  openMenu(false);
+}
 
 requestAnimationFrame((t) => {
   last = t;

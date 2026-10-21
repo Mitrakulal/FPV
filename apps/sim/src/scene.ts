@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import type { Assets, TexSet } from './assets';
-import { buildQuad, type QuadModel } from './quad';
-import type { Collider } from './physics';
+import { buildQuad } from './quad';
+import type { Collider, Platform, Ramp } from './physics';
+import { buildPark } from './park';
+import type { World } from './world';
 import {
   bannerTexture,
   chainLinkTexture,
@@ -14,14 +16,7 @@ import {
   treelineTexture,
 } from './textures';
 
-export interface World {
-  scene: THREE.Scene;
-  quad: QuadModel;
-  sun: THREE.DirectionalLight;
-  colliders: Collider[];
-  dust: THREE.Points;
-  puddles: THREE.Mesh[];
-}
+export type { World } from './world';
 
 type MatOpts = {
   color?: number;
@@ -62,6 +57,8 @@ function shadowed(mesh: THREE.Mesh, cast = true, receive = true): THREE.Mesh {
 export async function buildWorld(renderer: THREE.WebGLRenderer, assets: Assets): Promise<World> {
   const scene = new THREE.Scene();
   const colliders: Collider[] = [];
+  const ramps: Ramp[] = [];
+  const platforms: Platform[] = [];
 
   // ---------------------------------------------------------------- lighting
   // Late-afternoon sun coming across the course from the front-left. Keeping it
@@ -69,18 +66,21 @@ export async function buildWorld(renderer: THREE.WebGLRenderer, assets: Assets):
   const sunDir = new THREE.Vector3(-0.52, 0.4, -0.74).normalize();
 
   const sun = new THREE.DirectionalLight(0xffe0c2, 3.8);
-  sun.position.copy(sunDir).multiplyScalar(110);
-  sun.target.position.set(0, 0, -26);
+  const sunTarget = new THREE.Vector3(28, 0, -52);
+  sun.position.copy(sunDir).multiplyScalar(132).add(sunTarget);
+  sun.target.position.copy(sunTarget);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
-  sun.shadow.camera.near = 20;
-  sun.shadow.camera.far = 260;
-  sun.shadow.camera.left = -58;
-  sun.shadow.camera.right = 58;
-  sun.shadow.camera.top = 58;
-  sun.shadow.camera.bottom = -58;
+  sun.shadow.camera.near = 10;
+  sun.shadow.camera.far = 300;
+  // Wider than the first airfield-only pass: the park lives east of the strip
+  // and still needs readable contact shadows.
+  sun.shadow.camera.left = -94;
+  sun.shadow.camera.right = 94;
+  sun.shadow.camera.top = 94;
+  sun.shadow.camera.bottom = -94;
   sun.shadow.bias = -0.0003;
-  sun.shadow.normalBias = 0.05;
+  sun.shadow.normalBias = 0.055;
   sun.shadow.camera.updateProjectionMatrix();
   scene.add(sun);
   scene.add(sun.target);
@@ -513,14 +513,32 @@ export async function buildWorld(renderer: THREE.WebGLRenderer, assets: Assets):
   });
 
   for (const fx of [-54, 54]) {
-    const fence = new THREE.Mesh(new THREE.PlaneGeometry(156, 3.4), fenceMat);
-    fence.rotation.y = Math.PI / 2;
-    fence.position.set(fx, 1.7, -66);
-    scene.add(fence);
+    const spans: Array<[number, number]> =
+      fx === 54
+        ? [
+            [12, -10],
+            [-26, -144],
+          ]
+        : [[12, -144]];
+
+    for (const [zA, zB] of spans) {
+      const length = Math.abs(zB - zA);
+      const mat = fenceMat.clone();
+      mat.map = chain.clone();
+      mat.map.repeat.set(length / 3, 1.6);
+      mat.map.needsUpdate = true;
+      const fence = new THREE.Mesh(new THREE.PlaneGeometry(length, 3.4), mat);
+      fence.rotation.y = Math.PI / 2;
+      fence.position.set(fx, 1.7, (zA + zB) / 2);
+      scene.add(fence);
+    }
 
     for (let i = 0; i <= 26; i++) {
+      const z = 12 - i * 6;
+      // Service entrance to the park: leave the fence line open here.
+      if (fx === 54 && z < -9 && z > -27) continue;
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3.5, 8), postMat);
-      post.position.set(fx, 1.75, 12 - i * 6);
+      post.position.set(fx, 1.75, z);
       shadowed(post, true, false);
       scene.add(post);
     }
@@ -585,7 +603,8 @@ export async function buildWorld(renderer: THREE.WebGLRenderer, assets: Assets):
 
   const clusters = [
     { x: -105, z: -40, r: 48 },
-    { x: 108, z: -58, r: 42 },
+    // Keep the east tree line beyond the skate park so the new plaza is open.
+    { x: 195, z: -34, r: 38 },
     { x: -15, z: -152, r: 58 },
     { x: 78, z: 44, r: 36 },
     { x: -112, z: 34, r: 42 },
@@ -660,6 +679,8 @@ export async function buildWorld(renderer: THREE.WebGLRenderer, assets: Assets):
     let z = -gr() * 140 + 16;
     // grass only grows off the runway
     if (Math.abs(x) < 55) x = Math.sign(x || 1) * (55 + gr() * 20);
+    // keep the park service path clear
+    if (x > 46 && x < 78 && z > -31 && z < -5) x = -48 - gr() * 12;
     const s = 0.6 + gr() * 0.9;
     const rot = gr() * Math.PI;
 
@@ -741,17 +762,17 @@ export async function buildWorld(renderer: THREE.WebGLRenderer, assets: Assets):
 
   const startBanner = new THREE.Mesh(
     new THREE.PlaneGeometry(11.6, 1.15),
-    canvasMat(bannerTexture('FPV RIG  ·  TIME TRIAL', '#ff6a18')),
+    canvasMat(bannerTexture('FPV RIG  ·  FREE FLIGHT', '#ff6a18')),
   );
   startBanner.position.set(0, 4.9, gantryZ + 0.01);
   scene.add(startBanner);
 
   // trackside banner stands
   const stands: Array<[number, number, number, string, string]> = [
-    [15, -20, -0.9, 'RACE', '#ff6a18'],
+    [15, -20, -0.9, 'FREE', '#ff6a18'],
     [-16, -33, 0.8, 'ACRO', '#1fb8ff'],
     [16, -47, -0.7, 'FPV', '#ffc21a'],
-    [-14, -57, 0.9, 'RACE', '#ff6a18'],
+    [-14, -57, 0.9, 'PARK', '#35e08a'],
   ];
   for (const [sx, sz, rot, text, accent] of stands) {
     const stand = new THREE.Group();
@@ -965,9 +986,34 @@ export async function buildWorld(renderer: THREE.WebGLRenderer, assets: Assets):
     max: { x: -20.8, y: 2.1, z: 0.2 },
   });
 
+  // ---------------------------------------------------------------- park
+  const park = await buildPark(scene, assets, colliders);
+  ramps.push(...park.ramps);
+  platforms.push(...park.platforms);
+
   // ---------------------------------------------------------------- the quad
   const quad = buildQuad();
   scene.add(quad.group);
 
-  return { scene, quad, sun, colliders, dust, puddles };
+  return {
+    kind: 'airfield',
+    label: 'AIRFIELD + PARK',
+    scene,
+    quad,
+    sun,
+    colliders,
+    ramps,
+    platforms,
+    dust,
+    puddles,
+    spawn: { x: 0, y: 0.06, z: 0 },
+    overview: { pos: [0, 36, 30], look: [0, 0, -28] },
+    grade: {
+      bloomThreshold: 1.5,
+      bloom: 0.12,
+      exposure: 1.0,
+      vignette: 0.75,
+      grain: 0.018,
+    },
+  };
 }

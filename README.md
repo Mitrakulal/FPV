@@ -50,10 +50,10 @@ possible but is not part of the current build.
   motor lag, differential-thrust torque, yaw reaction, battery sag and prop-wash disturbance.
 - **Forgiving contact model** — light bumps bounce and slide; only hard impacts or a
   nearly-inverted ground strike end the attempt.
-- **A real course** — 100 m × 400 m runway, warehouse, containers, tyres, pallets and five
-  gates, with FPV, chase and overview cameras.
+- **Two worlds** — an outdoor airfield + skate park for free flight and an indoor
+  start-to-finish tesseract course with six portals, three ramps and a mezzanine finish.
 - **Instrumented** — live HUD for RTT, packet rate, physics Hz, FPS, frame time, voltage,
-  altitude, speed, tilt and run timer.
+  altitude, speed, tilt and course progress.
 
 ## How it works
 

@@ -99,6 +99,41 @@ export interface Collider {
   max: { x: number; y: number; z: number };
 }
 
+/**
+ * A flat, landable surface above the ground. The matching visual slab is added
+ * by the map builder; physics only needs the footprint and the top height.
+ */
+export interface Platform {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+  top: number;
+}
+
+/**
+ * A solid ramp / bank. The surface rises linearly from yAtMin to yAtMax along
+ * the chosen axis. The mesh is a solid wedge down to y = 0, so the route can
+ * use it as a floor and low props can use it as a skate bank.
+ */
+export interface Ramp {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+  axis: 'x' | 'z';
+  yAtMin: number;
+  yAtMax: number;
+}
+
+function rampHeight(r: Ramp, x: number, z: number): number {
+  const t =
+    r.axis === 'z'
+      ? (z - r.minZ) / Math.max(1e-6, r.maxZ - r.minZ)
+      : (x - r.minX) / Math.max(1e-6, r.maxX - r.minX);
+  return r.yAtMin + (r.yAtMax - r.yAtMin) * clamp(t, 0, 1);
+}
+
 const MOTOR_POS: Array<{ x: number; z: number; s: number }> = [
   { x: 1, z: -1, s: 1 }, // 0 front right, CCW
   { x: -1, z: -1, s: -1 }, // 1 front left, CW
@@ -122,6 +157,10 @@ export class QuadSim {
   params: QuadParams;
   state: QuadState;
   colliders: Collider[] = [];
+  platforms: Platform[] = [];
+  ramps: Ramp[] = [];
+  /** Reset position. Maps move this before calling reset(). */
+  spawn: Vec3 = { x: 0, y: 0.06, z: 0 };
 
   private integral: Vec3 = { x: 0, y: 0, z: 0 };
   private prevOmega: Vec3 = { x: 0, y: 0, z: 0 };
@@ -136,7 +175,7 @@ export class QuadSim {
 
   private initialState(): QuadState {
     return {
-      pos: { x: 0, y: 0.06, z: 0 },
+      pos: { x: this.spawn.x, y: this.spawn.y, z: this.spawn.z },
       vel: { x: 0, y: 0, z: 0 },
       quat: { x: 0, y: 0, z: 0, w: 1 },
       omega: { x: 0, y: 0, z: 0 },
@@ -154,6 +193,59 @@ export class QuadSim {
     this.angleTargetPitch = 0;
     this.angleTargetRoll = 0;
     this.state = this.initialState();
+  }
+
+  /**
+   * Highest landable surface under the quad, if that surface is at or just
+   * below the probe height. A small tolerance lets a landing snap cleanly
+   * instead of falling through a thin slab at high tick rates.
+   */
+  private surfaceAt(x: number, z: number, probeY: number): number | null {
+    let best: number | null = null;
+
+    for (const p of this.platforms) {
+      if (x < p.minX || x > p.maxX || z < p.minZ || z > p.maxZ) continue;
+      if (p.top > probeY + 0.05) continue;
+      if (best === null || p.top > best) best = p.top;
+    }
+
+    for (const r of this.ramps) {
+      if (x < r.minX || x > r.maxX || z < r.minZ || z > r.maxZ) continue;
+      const h = rampHeight(r, x, z);
+      if (h > probeY + 0.05) continue;
+      if (best === null || h > best) best = h;
+    }
+
+    return best;
+  }
+
+  private landOnSurfaces(): void {
+    const s = this.state;
+    if (s.vel.y > 0.25) return;
+
+    const top = this.surfaceAt(s.pos.x, s.pos.z, s.pos.y);
+    if (top === null || s.pos.y > top + 0.03) return;
+
+    const impact = Math.max(0, -s.vel.y);
+    s.pos.y = top + 0.02;
+    s.vel.y = 0;
+    if (impact > 2) {
+      s.vel.x *= 0.75;
+      s.vel.z *= 0.75;
+    }
+    const w = s.omega;
+    w.x = 0;
+    w.y = 0;
+    w.z = 0;
+
+    if (impact > 15 || Math.abs(this.tilt()) > 1.45) {
+      s.crashed = true;
+      s.motors = [0, 0, 0, 0];
+      s.thrust = [0, 0, 0, 0];
+      s.vel.x = 0;
+      s.vel.y = 0;
+      s.vel.z = 0;
+    }
   }
 
   /** Throttle that holds altitude in still air (0..1), including pack sag. */
@@ -183,8 +275,13 @@ export class QuadSim {
       s.pos.x += s.vel.x * dt;
       s.pos.y += s.vel.y * dt;
       s.pos.z += s.vel.z * dt;
-      if (s.pos.y <= 0.02) {
-        s.pos.y = 0.02;
+
+      // A dead quad still settles on ramps and mezzanine decks rather than
+      // falling through them to the ground plane.
+      const surface = this.surfaceAt(s.pos.x, s.pos.z, s.pos.y);
+      const restY = surface === null ? 0.02 : surface + 0.02;
+      if (s.pos.y <= restY) {
+        s.pos.y = restY;
         s.vel.x = 0;
         s.vel.y = 0;
         s.vel.z = 0;
@@ -357,6 +454,12 @@ export class QuadSim {
     q.y /= qlen;
     q.z /= qlen;
     q.w /= qlen;
+
+    // ---- ramps / raised decks -------------------------------------------
+    // These are landable surfaces, checked before box colliders so a quad
+    // descending onto a mezzanine does not get pushed around by the slab's
+    // collider. Slabs are deliberately modelled a little below the deck top.
+    if (!s.crashed) this.landOnSurfaces();
 
     // ---- obstacles -------------------------------------------------------
     // A bump only ends the run if you really smack something. Light contact

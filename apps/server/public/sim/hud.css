@@ -119,6 +119,59 @@ body {
   flex-direction: row;
   gap: 12px;
 }
+.bt {
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  align-items: center;
+}
+
+.mapbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 4px 3px 11px;
+  border: 1px solid rgb(220 235 250 / 0.14);
+  background: rgb(3 7 11 / 0.34);
+  backdrop-filter: blur(4px);
+}
+
+.mapname {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: #d9e6f4;
+}
+
+.mapbtn {
+  pointer-events: auto;
+  padding: 4px 9px;
+  border: 1px solid rgb(53 224 138 / 0.36);
+  background: rgb(53 224 138 / 0.08);
+  color: var(--accent);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+.mapbtn:hover,
+.mapbtn:focus-visible {
+  background: rgb(53 224 138 / 0.18);
+  border-color: rgb(53 224 138 / 0.7);
+  outline: none;
+}
+
+#progress {
+  max-width: 44vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #d8e8f5;
+}
 
 .line {
   display: flex;
@@ -286,8 +339,310 @@ body {
   text-shadow: 0 1px 2px #000;
 }
 
+/* ---------------------------------------------------------------- menu */
+body.menu-open #hud,
+body.menu-open .help {
+  opacity: 0;
+}
+
+#hud,
+.help {
+  transition: opacity 240ms ease;
+}
+
+#menu[hidden],
+.resume-btn[hidden] {
+  display: none;
+}
+
+.menu {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 26px;
+  overflow: auto;
+  background:
+    radial-gradient(circle at 24% 18%, rgb(22 51 41 / 0.36), transparent 42%),
+    radial-gradient(circle at 82% 76%, rgb(16 42 58 / 0.42), transparent 48%),
+    linear-gradient(180deg, rgb(2 5 8 / 0.7), rgb(2 5 8 / 0.9));
+  backdrop-filter: blur(7px) saturate(0.85);
+}
+
+.menu-grid-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgb(120 180 210 / 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(120 180 210 / 0.045) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at 50% 45%, #000 20%, transparent 78%);
+}
+
+.menu-card {
+  position: relative;
+  width: min(1020px, 100%);
+  padding: 38px 42px 30px;
+  border: 1px solid rgb(200 225 245 / 0.14);
+  background: linear-gradient(145deg, rgb(9 15 21 / 0.86), rgb(4 8 12 / 0.92));
+  box-shadow:
+    0 30px 80px rgb(0 0 0 / 0.65),
+    inset 0 1px 0 rgb(255 255 255 / 0.04);
+}
+
+.menu-card::before,
+.menu-card::after {
+  content: "";
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-color: rgb(53 224 138 / 0.6);
+  border-style: solid;
+  pointer-events: none;
+}
+.menu-card::before {
+  top: -1px;
+  left: -1px;
+  border-width: 1px 0 0 1px;
+}
+.menu-card::after {
+  right: -1px;
+  bottom: -1px;
+  border-width: 0 1px 1px 0;
+}
+
+.menu-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: #63d99a;
+}
+
+.menu-title {
+  margin: 9px 0 6px;
+  font-size: clamp(30px, 5vw, 48px);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  color: #f2f8ff;
+  text-shadow: 0 0 32px rgb(53 224 138 / 0.16);
+}
+
+.menu-sub {
+  margin: 0;
+  max-width: 560px;
+  font-size: 12px;
+  line-height: 1.65;
+  letter-spacing: 0.03em;
+  color: #8497aa;
+}
+
+.map-select {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.map-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 212px;
+  padding: 20px 20px 18px;
+  border: 1px solid rgb(200 225 245 / 0.13);
+  background:
+    linear-gradient(150deg, rgb(255 255 255 / 0.035), transparent 55%),
+    rgb(5 10 14 / 0.72);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.map-card::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2px;
+  opacity: 0.4;
+  transition: opacity 180ms ease;
+}
+
+.map-card.airfield::after {
+  background: linear-gradient(90deg, #35e08a, #ffb020);
+}
+.map-card.indoor::after {
+  background: linear-gradient(90deg, #ffb15c, #59d8ff);
+}
+
+.map-card:hover,
+.map-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgb(53 224 138 / 0.55);
+  box-shadow:
+    0 18px 40px rgb(0 0 0 / 0.5),
+    0 0 0 1px rgb(53 224 138 / 0.12);
+  outline: none;
+}
+
+.map-card.indoor:hover,
+.map-card.indoor:focus-visible {
+  border-color: rgb(255 177 92 / 0.6);
+  box-shadow:
+    0 18px 40px rgb(0 0 0 / 0.5),
+    0 0 0 1px rgb(255 177 92 / 0.14);
+}
+
+.map-card:hover::after,
+.map-card:focus-visible::after {
+  opacity: 1;
+}
+
+.map-no {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  color: rgb(255 255 255 / 0.07);
+}
+
+.map-kind {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: #35e08a;
+}
+.map-card.indoor .map-kind {
+  color: #ffb15c;
+}
+
+.map-title {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+}
+
+.map-desc {
+  max-width: 36ch;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #8496a8;
+}
+
+.map-go {
+  margin-top: auto;
+  padding-top: 14px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #dceaf6;
+}
+.map-card:hover .map-go,
+.map-card:focus-visible .map-go {
+  color: #35e08a;
+}
+.map-card.indoor:hover .map-go,
+.map-card.indoor:focus-visible .map-go {
+  color: #ffb15c;
+}
+
+.menu-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid rgb(200 225 245 / 0.1);
+}
+
+.menu-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  color: #607387;
+}
+
+.menu-controls b {
+  color: #9fb2c5;
+  font-weight: 600;
+}
+
+.resume-btn {
+  flex: none;
+  padding: 10px 18px;
+  border: 1px solid rgb(53 224 138 / 0.5);
+  background: rgb(53 224 138 / 0.1);
+  color: #7dffb8;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.resume-btn:hover,
+.resume-btn:focus-visible {
+  background: rgb(53 224 138 / 0.2);
+  outline: none;
+}
+
 @media (max-width: 760px) {
   .help {
     display: none;
+  }
+
+  .menu {
+    padding: 12px;
+  }
+
+  .menu-card {
+    padding: 26px 18px 20px;
+  }
+
+  .map-select {
+    grid-template-columns: 1fr;
+  }
+
+  .map-card {
+    min-height: 168px;
+  }
+
+  .menu-foot {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .resume-btn {
+    width: 100%;
+  }
+
+  .bt {
+    top: 10px;
+  }
+
+  .mapname {
+    max-width: 46vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #progress {
+    max-width: 56vw;
   }
 }
