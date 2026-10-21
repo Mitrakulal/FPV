@@ -185,12 +185,6 @@ export async function buildIndoorWorld(renderer: THREE.WebGLRenderer, assets: As
   scene.add(sun);
   scene.add(sun.target);
 
-  const fill = new THREE.DirectionalLight(0x7cc5e8, 1.25);
-  fill.position.set(-22, 18, -94);
-  fill.target.position.set(0, 5, -42);
-  scene.add(fill);
-  scene.add(fill.target);
-
   scene.add(new THREE.HemisphereLight(0xffc38c, 0x080c12, 1.1));
   scene.add(new THREE.AmbientLight(0x91a9c4, 0.42));
 
