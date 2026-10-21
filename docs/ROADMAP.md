@@ -21,27 +21,30 @@ what is being tuned, and what comes next.
    stick. This is the largest remaining behavior gap versus a real 5-inch quad.
 2. **In-sim tuning panel.** Rates, PID gains, camera tilt, expo and trim, persisted per
    pilot. The physics parameters are already centralized in `DEFAULT_PARAMS`.
-3. **Map and camera polish.** Start menu previews, map switching and overview cameras for both
-   worlds.
+3. **Route and map polish.** Alternate indoor routes, more park street detail and stronger
+   start-menu previews for both worlds.
 4. **Visual polish.** Near-field asphalt detail, runway and gate scale, distant grass,
    warehouse materials, tyre walls and pallet stacks.
-5. **Camera and audio polish.** More tilt range, a cleaner analog mode, RPM/ wind audio
+5. **Camera and audio polish.** More tilt range, a cleaner analog mode, RPM/wind audio
    balance and a mute state that survives reloads.
 
 ## Current limitations
 
 - Air mode is not implemented.
-- No lap timer, ghost or session statistics; the indoor course uses untimed portal progress.
+- No lap timer, ghost or session statistics; the indoor course is a linear, untimed run with
+  portal progress.
 - No in-sim rates/PID/camera panel.
 - The launcher and ADB helper are Windows-specific.
 - No multiplayer, cloud hosting or native mobile app.
-- The course is static; colliders are boxes, not triangle meshes.
+- The maps and props are static; colliders are boxes and analytic ramp/platform surfaces,
+  not triangle meshes.
 
 ## Explicit non-goals
 
 - Controlling a real aircraft or flight controller.
 - Replacing a full commercial simulator.
 - Accounts, telemetry, cloud saves or an online leaderboard.
+- Lap timing, splits, ghosts or medals; the indoor map is a training line, not a time trial.
 - A mobile-only experience; the laptop renders the world.
 - A native phone app or Play Store distribution.
 

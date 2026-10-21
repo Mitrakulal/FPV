@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { Ramp } from './physics';
+import type { Collider, Ramp } from './physics';
 
 /**
  * Solid wedge geometry for a z-axis ramp. The physics surface and the mesh use
@@ -73,4 +73,51 @@ export function rampEdge(ramp: Ramp, x: number, material: THREE.Material): THREE
   mesh.position.set(x, (yA + yB) / 2, (zA + zB) / 2);
   mesh.rotation.x = Math.atan2(yA - yB, zB - zA);
   return mesh;
+}
+
+/**
+ * Solid shells for a ramp. The slope itself stays a landable surface; these
+ * thin boxes close the two sides and the tall end so a quad cannot fly through
+ * the side of a bank. Side shells are split along the slope and never rise
+ * above the local surface, which keeps the walkable top clear.
+ */
+export function rampColliders(ramp: Ramp, steps = 6): Collider[] {
+  const out: Collider[] = [];
+  const along = ramp.axis === 'z' ? [ramp.minZ, ramp.maxZ] : [ramp.minX, ramp.maxX];
+  const [t0, t1] = along as [number, number];
+  const span = t1 - t0;
+  if (span <= 1e-3) return out;
+
+  const thickness = 0.07;
+  const rise = ramp.yAtMax - ramp.yAtMin;
+  const heightAt = (t: number) => ramp.yAtMin + rise * Math.max(0, Math.min(1, (t - t0) / span));
+
+  for (let i = 0; i < steps; i++) {
+    const a = t0 + (span * i) / steps;
+    const b = t0 + (span * (i + 1)) / steps;
+    const h = Math.max(heightAt(a), heightAt(b));
+    if (h <= 0.08) continue;
+    if (ramp.axis === 'z') {
+      out.push({ min: { x: ramp.minX, y: 0, z: a }, max: { x: ramp.minX + thickness, y: h, z: b } });
+      out.push({ min: { x: ramp.maxX - thickness, y: 0, z: a }, max: { x: ramp.maxX, y: h, z: b } });
+    } else {
+      out.push({ min: { x: a, y: 0, z: ramp.minZ }, max: { x: b, y: h, z: ramp.minZ + thickness } });
+      out.push({ min: { x: a, y: 0, z: ramp.maxZ - thickness }, max: { x: b, y: h, z: ramp.maxZ } });
+    }
+  }
+
+  // Cap the tall end, stopping 20 cm below the lip so landing on the edge wins.
+  const capTop = Math.max(ramp.yAtMin, ramp.yAtMax) - 0.2;
+  if (capTop > 0.05) {
+    const highAtMax = ramp.yAtMax > ramp.yAtMin;
+    if (ramp.axis === 'z') {
+      const z = highAtMax ? ramp.maxZ - thickness : ramp.minZ;
+      out.push({ min: { x: ramp.minX + thickness, y: 0, z }, max: { x: ramp.maxX - thickness, y: capTop, z: z + thickness } });
+    } else {
+      const x = highAtMax ? ramp.maxX - thickness : ramp.minX;
+      out.push({ min: { x, y: 0, z: ramp.minZ + thickness }, max: { x: x + thickness, y: capTop, z: ramp.maxZ - thickness } });
+    }
+  }
+
+  return out;
 }

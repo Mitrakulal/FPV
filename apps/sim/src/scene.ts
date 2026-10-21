@@ -66,19 +66,19 @@ export async function buildWorld(renderer: THREE.WebGLRenderer, assets: Assets):
   const sunDir = new THREE.Vector3(-0.52, 0.4, -0.74).normalize();
 
   const sun = new THREE.DirectionalLight(0xffe0c2, 3.8);
-  const sunTarget = new THREE.Vector3(28, 0, -52);
+  const sunTarget = new THREE.Vector3(44, 0, -52);
   sun.position.copy(sunDir).multiplyScalar(132).add(sunTarget);
   sun.target.position.copy(sunTarget);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.near = 10;
   sun.shadow.camera.far = 300;
-  // Wider than the first airfield-only pass: the park lives east of the strip
-  // and still needs readable contact shadows.
-  sun.shadow.camera.left = -94;
-  sun.shadow.camera.right = 94;
-  sun.shadow.camera.top = 94;
-  sun.shadow.camera.bottom = -94;
+  // Wide enough to hold the runway, the warehouse and the park plaza east of
+  // the strip in one shadow pass; the centre sits between them.
+  sun.shadow.camera.left = -104;
+  sun.shadow.camera.right = 104;
+  sun.shadow.camera.top = 104;
+  sun.shadow.camera.bottom = -104;
   sun.shadow.bias = -0.0003;
   sun.shadow.normalBias = 0.055;
   sun.shadow.camera.updateProjectionMatrix();
@@ -99,6 +99,14 @@ export async function buildWorld(renderer: THREE.WebGLRenderer, assets: Assets):
 
   scene.fog = new THREE.FogExp2(0xb9bec2, 0.0024);
   scene.add(new THREE.AmbientLight(0xdce8ff, 0.14));
+
+  // Very soft cool fill from the east. The low sun leaves the skate-park banks
+  // facing away from it almost black; this keeps their slopes readable.
+  const fill = new THREE.DirectionalLight(0xbfd7f2, 0.45);
+  fill.position.set(210, 55, -20);
+  fill.target.position.set(60, 0, -52);
+  scene.add(fill);
+  scene.add(fill.target);
 
   // ---------------------------------------------------------------- ground
   const grass = await assets.tex('grass_ground', 240, 240);

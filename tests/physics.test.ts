@@ -12,6 +12,8 @@ function freeze(s: QuadSim, throttle: number): Inputs {
   return { throttle, roll: 0, pitch: 0, yaw: 0, armed: true, angle: false };
 }
 
+const idle: Inputs = { throttle: 0, roll: 0, pitch: 0, yaw: 0, armed: false, angle: false };
+
 test('hover throttle is physically sane (~30-40%)', () => {
   const s = sim();
   const h = s.hoverThrottle();
@@ -125,7 +127,7 @@ test('crash from height stops the quad', () => {
 test('a 10 m drop is survivable, not a crash', () => {
   const s = sim();
   s.reset();
-  s.state.pos.y = 10; // ~12.3 m/s touchdown
+  s.state.pos.y = 10; // ~14 m/s touchdown
   for (let i = 0; i < 3000; i++) s.step(DT, { throttle: 0, roll: 0, pitch: 0, yaw: 0, armed: false, angle: false });
   assert.equal(s.state.crashed, false);
   assert.ok(Math.abs(s.state.pos.y - 0.02) < 1e-6);
@@ -232,5 +234,57 @@ test('angle mode levels out without overshooting past level', () => {
     maxPitch = Math.max(maxPitch, s.euler().x);
   }
   assert.ok(maxPitch < (2 * Math.PI) / 180, `overshot level by ${((maxPitch * 180) / Math.PI).toFixed(1)}°`);
+});
+
+// ---------------------------------------------------------------- worlds
+
+test('reset uses the map spawn instead of the origin', () => {
+  const s = sim();
+  s.spawn = { x: 3, y: 0.06, z: -12 };
+  s.reset();
+  assert.deepEqual(s.state.pos, { x: 3, y: 0.06, z: -12 });
+  assert.deepEqual(s.state.vel, { x: 0, y: 0, z: 0 });
+  assert.equal(s.state.crashed, false);
+});
+
+test('a raised platform is landable and holds the quad', () => {
+  const s = sim();
+  s.platforms = [{ minX: -5, maxX: 5, minZ: -5, maxZ: 5, top: 4 }];
+  s.reset();
+  s.state.pos = { x: 0, y: 7, z: 0 };
+  for (let i = 0; i < 3000; i++) s.step(DT, idle);
+  assert.equal(s.state.crashed, false);
+  assert.ok(Math.abs(s.state.pos.y - 4.02) < 0.01, `pos.y ${s.state.pos.y}`);
+});
+
+test('a 10 m drop onto a platform is survivable', () => {
+  const s = sim();
+  s.platforms = [{ minX: -5, maxX: 5, minZ: -5, maxZ: 5, top: 5 }];
+  s.reset();
+  s.state.pos = { x: 0, y: 15, z: 0 };
+  for (let i = 0; i < 3000; i++) s.step(DT, idle);
+  assert.equal(s.state.crashed, false);
+  assert.ok(Math.abs(s.state.pos.y - 5.02) < 0.01, `pos.y ${s.state.pos.y}`);
+});
+
+test('a slope is landable at its local height', () => {
+  const s = sim();
+  s.ramps = [{ minX: -5, maxX: 5, minZ: -10, maxZ: 0, axis: 'z', yAtMin: 2, yAtMax: 0 }];
+  s.reset();
+  // z = -8 is 20% along the ramp: surface = 2 + (0 - 2) * 0.2 = 1.6
+  s.state.pos = { x: 0, y: 2.6, z: -8 };
+  for (let i = 0; i < 1500; i++) s.step(DT, idle);
+  assert.equal(s.state.crashed, false);
+  assert.ok(Math.abs(s.state.pos.y - 1.62) < 0.02, `pos.y ${s.state.pos.y}`);
+});
+
+test('a dead quad settles on a raised deck, not the floor', () => {
+  const s = sim();
+  s.platforms = [{ minX: -5, maxX: 5, minZ: -5, maxZ: 5, top: 5 }];
+  s.reset();
+  s.state.pos = { x: 0, y: 9, z: 0 };
+  s.state.crashed = true;
+  for (let i = 0; i < 3000; i++) s.step(DT, idle);
+  assert.ok(Math.abs(s.state.pos.y - 5.02) < 0.01, `pos.y ${s.state.pos.y}`);
 });
 

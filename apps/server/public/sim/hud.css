@@ -170,6 +170,7 @@ body {
   max-width: 44vw;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
   color: #d8e8f5;
 }
 
@@ -348,6 +349,12 @@ body.menu-open .help {
 #hud,
 .help {
   transition: opacity 240ms ease;
+}
+
+/* Clean frame for README stills and thumbnails (?hud=0). */
+body.hide-hud #hud,
+body.hide-hud .help {
+  display: none;
 }
 
 #menu[hidden],

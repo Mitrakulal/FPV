@@ -194,10 +194,26 @@ ends only if:
 - horizontal speed **> 15 m/s**, or
 - tilt from vertical **> 1.45 rad** (≈ 83°).
 
-This is deliberately forgiving. A 10 m drop touches down at about 12.3 m/s and survives; a
-20 m drop reaches about 15.8 m/s and ends the run. There is no automatic respawn. A crashed
+This is deliberately forgiving. A 10 m drop touches down at about 14 m/s and survives; a
+20 m drop reaches about 19.8 m/s and ends the run. There is no automatic respawn. A crashed
 quad has no motors and falls under gravity until it settles; `R` rebuilds the run from the
 start line.
+
+### Raised surfaces
+
+Two extra primitives let a map build ramps and decks without triangle-mesh collision:
+
+- `Ramp` — a flat, linearly sloping surface along X or Z, with solid wedge geometry from the
+  same four corners used by the physics surface. The slope is landable; thin side and
+  end shells (split along the slope, capped below the lip) stop the quad flying through a
+  bank. `surfaces.ts` owns the shared mesh and collider generation.
+- `Platform` — a flat footprint at a fixed top height, used for the mezzanine and end deck.
+  The visual slab and its box collider are added alongside it.
+
+`step()` resolves landing surfaces before box colliders. Ground/ramp/deck contact zeroes
+vertical and angular velocity; a landing only counts if the quad was already at or above
+that surface, so flying into the side of a deck cannot snap the quad on top. The same
+>15 m/s and >83° crash thresholds apply on raised surfaces.
 
 ## Rendering
 
@@ -208,7 +224,9 @@ start line.
 - Render targets use 4× MSAA where supported. A two-pass bloom is composited in the final
   shader together with vignette, motion smear and an optional analog look.
 - Pixel ratio is chosen from viewport size and capped at 1.5; a runtime quality controller
-  lowers the internal scale and shadow resolution if frame time stays high.
+  steps the internal scale down (0.85 → 0.7 → 0.6) and halves shadow resolution if the
+  smoothed frame rate stays below 55 fps. It only steps down, so a transient load spike can
+  cost some sharpness until reload; `?fixed=1` disables it for benchmarking.
 - FPV camera sits at the body centre with a configurable tilt (24° default, 0–60°) and a
   speed-dependent FOV widening. The chase camera is spring-damped. An overview camera is
   available for debugging and screenshots.

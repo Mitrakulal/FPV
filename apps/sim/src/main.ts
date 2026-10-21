@@ -304,7 +304,7 @@ const hud = {
   spd: el<HTMLSpanElement>('spd'),
   volts: el<HTMLSpanElement>('volts'),
   tilt: el<HTMLSpanElement>('tilt'),
-  progress: el<HTMLSpanElement>('progress'),
+  progress: el<HTMLDivElement>('progress'),
   mapName: el<HTMLSpanElement>('mapName'),
   armPill: el<HTMLDivElement>('armPill'),
   modePill: el<HTMLDivElement>('modePill'),
@@ -318,6 +318,11 @@ const hud = {
 const menuEl = el<HTMLDivElement>('menu');
 const resumeBtn = el<HTMLButtonElement>('resumeBtn');
 const mapBtn = el<HTMLButtonElement>('mapBtn');
+
+// Screenshot aid: ?hud=0 hides the overlays so docs and thumbnails stay clean.
+if (new URLSearchParams(window.location.search).get('hud') === '0') {
+  document.body.classList.add('hide-hud');
+}
 
 for (const button of document.querySelectorAll<HTMLButtonElement>('[data-map]')) {
   button.addEventListener('click', () => {
@@ -607,7 +612,7 @@ let qualityStage = 0;
 let lowFpsFor = 0;
 
 function adaptQuality() {
-  if (fpsEma < 48) lowFpsFor += 1;
+  if (fpsEma < 55) lowFpsFor += 1;
   else lowFpsFor = Math.max(0, lowFpsFor - 0.5);
   if (lowFpsFor < 4) return;
 
@@ -624,6 +629,10 @@ function adaptQuality() {
       next.sun.shadow.map?.dispose();
       if (next.sun.shadow.map) next.sun.shadow.map = null;
     }
+    applySize();
+  } else if (qualityStage === 2) {
+    qualityStage = 3;
+    qualityScale = 0.6;
     applySize();
   }
 }
@@ -653,7 +662,9 @@ setTimeout(() => hud.boot.remove(), 700);
 // handy for poking at the sim from the devtools console
 (window as unknown as { fpv: unknown }).fpv = {
   renderer,
-  world: activeWorld,
+  get world() {
+    return activeWorld;
+  },
   worlds,
   activeWorld: () => activeWorld,
   sim,

@@ -87,8 +87,7 @@ export class TrainingCourse {
           }
         }
 
-        if (previous !== undefined) this.prevSide[i] = side;
-        else this.prevSide[i] = side;
+        this.prevSide[i] = side;
       }
     }
 

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Assets, TexSet } from './assets';
 import type { Collider, Platform, Ramp } from './physics';
-import { rampEdge, wedgeMesh } from './surfaces';
+import { rampColliders, rampEdge, wedgeMesh } from './surfaces';
 import { graffitiTexture, routeStencilTexture, signTexture } from './textures';
 
 type MatOpts = {
@@ -68,7 +68,6 @@ export async function buildPark(
   const concreteTex = await assets.tex('concrete_floor_worn_001', 12, 10);
   const wallTex = await assets.tex('concrete_wall_008', 6, 2);
   const asphaltTex = await assets.tex('asphalt_02', 4, 2);
-  const rustTex = await assets.tex('rusty_metal_02', 2, 1);
 
   const plazaMat = pbr(concreteTex, {
     color: 0xa9a69d,
@@ -171,13 +170,14 @@ export async function buildPark(
 
   // ---------------------------------------------------------------- ramps
   const rampMat = pbr(concreteTex, {
-    color: 0x9d9a90,
-    roughness: 0.93,
+    color: 0xb0aca2,
+    roughness: 0.9,
     normalScale: 0.9,
-    envMapIntensity: 0.4,
+    envMapIntensity: 0.5,
   });
   const addRamp = (r: Ramp) => {
     ramps.push(r);
+    colliders.push(...rampColliders(r));
     scene.add(wedgeMesh(r, rampMat));
     scene.add(rampEdge(r, r.minX + 0.08, amberGlow));
     scene.add(rampEdge(r, r.maxX - 0.08, amberGlow));

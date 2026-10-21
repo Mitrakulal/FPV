@@ -219,12 +219,15 @@ export class QuadSim {
     return best;
   }
 
-  private landOnSurfaces(): void {
+  private landOnSurfaces(prevY: number): void {
     const s = this.state;
     if (s.vel.y > 0.25) return;
 
     const top = this.surfaceAt(s.pos.x, s.pos.z, s.pos.y);
     if (top === null || s.pos.y > top + 0.03) return;
+    // Only land on a deck we were already at or above: flying into the side of
+    // a mezzanine must not snap the quad on top of it.
+    if (prevY < top - 0.06) return;
 
     const impact = Math.max(0, -s.vel.y);
     s.pos.y = top + 0.02;
@@ -410,6 +413,7 @@ export class QuadSim {
     const ay = (up.y * thrustTotal - dragScale * s.vel.y) / p.mass - 9.81;
     const az = (up.z * thrustTotal - dragScale * s.vel.z) / p.mass;
 
+    const prevY = s.pos.y;
     s.vel.x += ax * dt;
     s.vel.y += ay * dt;
     s.vel.z += az * dt;
@@ -459,7 +463,7 @@ export class QuadSim {
     // These are landable surfaces, checked before box colliders so a quad
     // descending onto a mezzanine does not get pushed around by the slab's
     // collider. Slabs are deliberately modelled a little below the deck top.
-    if (!s.crashed) this.landOnSurfaces();
+    if (!s.crashed) this.landOnSurfaces(prevY);
 
     // ---- obstacles -------------------------------------------------------
     // A bump only ends the run if you really smack something. Light contact

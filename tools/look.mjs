@@ -5,7 +5,7 @@
 import puppeteer from 'puppeteer-core';
 
 const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const BASE = 'http://127.0.0.1:8091';
+const BASE = process.env.BASE ?? 'http://127.0.0.1:8080';
 
 const browser = await puppeteer.launch({
   executablePath: CHROME,

@@ -2,7 +2,7 @@
 
 **A zero-cost, offline FPV simulator that turns an Android phone into a real transmitter over USB.**
 
-The laptop runs the physics and renders the airfield. The phone is the radio: absolute
+The laptop runs the physics and renders the chosen map. The phone is the radio: absolute
 throttle that stays where you put it, an arm switch, expo, and a link that targets 250 Hz
 down a USB cable. No accounts, no internet, no APK, no virtual gamepad.
 
@@ -99,17 +99,20 @@ Windows-specific.
 
 1. **Start the laptop side.** Double-click **`run.bat`**. On first run it installs
    dependencies, builds the app, starts the server and opens
-   <http://127.0.0.1:8080/sim/>.
-2. **Prepare the phone.** Enable **Developer options → USB debugging**, connect the cable
+   <http://127.0.0.1:8080/sim/> at the map menu.
+2. **Pick a map.** **AIRFIELD + PARK** is open free flight; **TESSERACT COURSE** is the
+   indoor start-to-finish run. `Esc` reopens the menu at any time, and the **MAPS** button
+   in the top bar does the same.
+3. **Prepare the phone.** Enable **Developer options → USB debugging**, connect the cable
    and accept the RSA prompt.
-3. **Open the cable tunnel.** Double-click **`connect-phone.bat`**. It uses the bundled
+4. **Open the cable tunnel.** Double-click **`connect-phone.bat`**. It uses the bundled
    `tools/platform-tools/adb.exe` and runs `adb reverse tcp:8080 tcp:8080`.
-4. **Open the transmitter.** On the phone, open Chrome at
+5. **Open the transmitter.** On the phone, open Chrome at
    **`http://127.0.0.1:8080/tx/`** and tap **FULL**.
-5. **Arm and fly.** Pull the throttle to the bottom, tap **DISARMED → ARMED**, raise the
+6. **Arm and fly.** Pull the throttle to the bottom, tap **DISARMED → ARMED**, raise the
    throttle to about 36% and fly. In ANGLE, pushing the right stick forward pitches the
    nose down and moves you forward.
-6. **Restart a run.** Use the **R** button next to **ARM** on the phone or `R` on the
+7. **Restart a run.** Use the **R** button next to **ARM** on the phone or `R` on the
    keyboard. A restart disarms the phone so the next run cannot start hot.
 
 No phone nearby? The keyboard flies the same physics:
@@ -125,6 +128,7 @@ C / O        chase / overview camera
 V            analog look
 M            mute audio
 H            hide the help bar
+Esc          map menu (pause)
 ```
 
 The keyboard fallback runs ACRO; ANGLE is selected on the phone's top-right toggle.
@@ -142,6 +146,8 @@ The keyboard fallback runs ACRO; ANGLE is selected on the phone's top-right togg
 | Camera | — | `C` (chase), `O` (overview) |
 | Camera tilt | — | `[` / `]` |
 | Analog look | — | `V` |
+| Map menu | **MAPS** button | `Esc` |
+| Pick map | — | `1` / `2` in the menu |
 | Mute | — | `M` |
 | Hide help | — | `H` |
 | TX settings | **SET** | — |
@@ -221,13 +227,39 @@ phone's `reset` request.
 - Fully local assets. The large HDR sky and texture set are committed so the sim works
   offline after a build.
 
-## The course
+## The maps
 
-The airfield is a 100 m × 400 m runway with a partly collapsed warehouse, stacked shipping
-containers, tyre walls, pallets, barrels, light poles and five numbered gates. The start
-gate is directly ahead of the spawn; gates 1–5 lead down the strip and around the props.
+Both maps are built at load and switched from the start menu, so changing world is instant.
+The scene, physics colliders, spawn and colour grade swap together.
+
+### Airfield + park
+
+A 100 m × 400 m runway with a partly collapsed warehouse, stacked shipping containers, tyre
+walls, pallets, barrels, light poles and five numbered gates. East of the strip, a service
+gap in the fence leads to a small skate park: two banks, a funbox with a raised deck, rails,
+ledges, benches, planters, a graffiti wall and two floating rings. The park is free flight —
+no gates and no timer.
 
 ![Airfield overview](docs/media/airfield.png)
+
+### Tesseract course
+
+A 32 m × 118 m indoor hall clad in warm amber and cool cyan panels, with painted route
+lines, numbered floor decals and arrows. The run is one linear, untimed line:
+
+1. **Arch 01** in the start wall.
+2. **Ramp 1** up to the 5 m mezzanine.
+3. **Ring 02** above the mezzanine deck.
+4. **Down-ramp** to the floor and through **Square 03**.
+5. **Slot 04**, then **Hex 05**.
+6. **Ramp 3** and **Ring 06** up to the 6 m end deck and the finish.
+
+Every opening is a real hole in a solid wall, and ramps and decks are landable surfaces, not
+decoration. The next portal frame pulses amber, completed ones fade green, a beacon floats
+above the live target, and the HUD reads `PORTAL n / 6`. A short chime confirms each
+crossing. There is no timer: the goal is to fly the line cleanly and stop on the end deck.
+
+![Tesseract course](docs/media/indoor.png)
 
 The phone transmitter:
 
@@ -244,10 +276,13 @@ Numbers from the development machine (Windows, Chrome, USB-tethered Android phon
 | Physics tick rate | 1,000–1,100 Hz |
 | Phone page send rate | 140–250 Hz (browser timer limits) |
 | Render loop | GPU-bound; live frame time is shown in the HUD |
-| Unit tests | 24 |
+| Unit tests | 29 |
 
 The physics tick is independent of render frame rate: a slow frame does not slow the
-flight model, and the HUD exposes both rates so the claim is checkable.
+flight model, and the HUD exposes both rates so the claim is checkable. Frame time depends on
+the GPU: on the reference Intel UHD laptop the airfield sits around 55–60 fps at 1920×1080,
+the indoor course steps the render scale down to hold the same range, and both maps stay above
+60 fps at 1280×720.
 
 ## Project layout
 
@@ -260,12 +295,17 @@ fpv/
 │  ├─ sim/                 three.js client and physics
 │  │  └─ src/
 │  │     ├─ physics.ts     rigid body, motors, rate loop, crash model
+│  │     ├─ surfaces.ts    ramp wedge mesh + ramp/platform colliders
+│  │     ├─ world.ts       shared world descriptor and map grade
 │  │     ├─ input.ts       phone link, reset handling, keyboard fallback
 │  │     ├─ scene.ts       airfield, props, gates, colliders
+│  │     ├─ park.ts        skate park, ramps, entrance, street props
+│  │     ├─ indoor.ts      tesseract course, portals, decks, lighting
+│  │     ├─ training.ts    ordered portal crossings, progress, glow
 │  │     ├─ post.ts        HDR pipeline, bloom, grading, analog look
 │  │     ├─ quad.ts        quad model and rotor visuals
 │  │     ├─ assets.ts      texture/HDR loading
-│  │     └─ main.ts        render loop, cameras, HUD, audio
+│  │     └─ main.ts        render loop, map menu, cameras, HUD, audio
 │  └─ tx/                  phone transmitter page
 ├─ packages/protocol/      22-byte frame codec, shared by all three apps
 ├─ tests/                  physics + protocol unit tests
@@ -289,13 +329,14 @@ Build outputs (`dist/`, `apps/server/public/sim/sim.js`,
 `apps/server/public/tx/tx.js`) are intentionally not committed. Run `npm run build` after a
 fresh clone, or use `run.bat`, which does it for you.
 
-The server binds to `127.0.0.1:8080`. The sim accepts `?alt=` (spawn altitude) and
+The server binds to `127.0.0.1:8080`. The sim accepts `?map=airfield|indoor`,
+`?alt=` (spawn altitude), `?look=x,y,z,tx,ty,tz` (free camera), `?hud=0` (clean frame) and
 `?view=chase|overview` for screenshots and testing.
 
 ## Testing
 
 ```bat
-npm test                    :: 24 physics + protocol tests
+npm test                    :: 29 physics + protocol tests
 npm run typecheck           :: strict TypeScript check
 node tools/smoke.ts         :: server up, pages served, 250 Hz relay, phone reset
 node tools/tx-test.mjs      :: touch drag, throttle hold, arm guard (server must run)
@@ -303,9 +344,17 @@ node tools/screenshot.mjs   :: headless render check + screenshots
 node tools/perf.mjs         :: frame-time sampling helper
 ```
 
+The desktop tools read `BASE` (default `http://127.0.0.1:8080`), so a test server on another
+port needs no edits:
+
+```bat
+set BASE=http://127.0.0.1:8091 && node tools/look.mjs
+```
+
 The physics suite covers hover equilibrium, the thrust curve, rate limits, ANGLE step
-response, drag, crash forgiveness, dead-fall behavior and the 10 m/20 m drop cases. The
-protocol suite covers round-trip encoding, checksum rejection and axis conversion.
+response, drag, crash forgiveness, dead-fall behavior, the 10 m/20 m drop cases, map spawns,
+landable ramps and raised platforms. The protocol suite covers round-trip encoding, checksum
+rejection and axis conversion.
 
 ## Status and roadmap
 
@@ -315,14 +364,15 @@ protocol suite covers round-trip encoding, checksum rejection and axis conversio
 | 1 | Phone transmitter, throttle hold, arm, failsafe, settings | Done |
 | 2 | Flight model, airfield, cameras, crash/reset | Done |
 | 3 | Feel tuning against a real pilot; air mode; tuning panel | In progress |
-| 4 | Gate timing, splits, laps, ghost | Planned |
+| 4 | Indoor training course, ramps, portal progress | Done |
 | 5 | Visual and performance polish, OSD refinements | In progress |
 | 6 | Optional ViGEm bridge for third-party sims | Exploratory |
 
-Current limitations, stated plainly: **air mode / idle-up is not implemented**; there is no
-lap timer or ghost yet; the in-sim rates/PID/camera panel is not built; the convenience
-scripts target Windows. The flight model, ANGLE/ACRO modes, crash model and phone link are
-working and tested. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the next steps and
+Current limitations, stated plainly: **air mode / idle-up is not implemented**; the indoor
+course is deliberately linear and untimed, and there is no lap timer, split or ghost; the
+in-sim rates/PID/camera panel is not built; the convenience scripts target Windows. The
+flight model, ANGLE/ACRO modes, crash model, two maps and phone link are working and
+tested. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the next steps and
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the implementation details.
 
 ## Credits

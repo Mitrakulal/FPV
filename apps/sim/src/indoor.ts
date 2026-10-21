@@ -3,7 +3,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import type { Assets, TexSet } from './assets';
 import { buildQuad } from './quad';
 import type { Collider, Platform, Ramp } from './physics';
-import { rampEdge, wedgeMesh } from './surfaces';
+import { rampColliders, rampEdge, wedgeMesh } from './surfaces';
 import { TrainingCourse, type PortalVisual } from './training';
 import {
   routeStencilTexture,
@@ -281,6 +281,21 @@ export async function buildIndoorWorld(renderer: THREE.WebGLRenderer, assets: As
     side: THREE.DoubleSide,
   });
 
+  // The six cross walls are extruded, so their UVs are in metres. Scale one
+  // texture tile to the same 14.25 m x 8.5 m footprint as the side cladding so
+  // the panel grid keeps a consistent size around every corner.
+  const wallCladTex = tesseractWallTexture(1, 1);
+  wallCladTex.repeat.set(1 / 14.25, 1 / 8.5);
+  const wallCladMat = new THREE.MeshStandardMaterial({
+    map: wallCladTex,
+    emissiveMap: wallCladTex,
+    emissive: 0xffffff,
+    emissiveIntensity: 0.38,
+    color: 0x8c8478,
+    roughness: 0.82,
+    metalness: 0.1,
+  });
+
   // ---------------------------------------------------------------- shell
   // Floor
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(32, 118), floorMat);
@@ -316,12 +331,14 @@ export async function buildIndoorWorld(renderer: THREE.WebGLRenderer, assets: As
   addBox(scene, colliders, wallMat, 0, 9, -100.25, 32.5, 18, 0.5, false, true);
   addBox(scene, colliders, ceilingMat, 0, 18.25, -41, 32.5, 0.5, 118.5, false, false);
 
-  // Outer wall colliders are manual so the visuals can stay thin.
-  colliders.push({ min: { x: -16.5, y: 0, z: 18 }, max: { x: -16, y: 18, z: -100 } });
-  colliders.push({ min: { x: 16, y: 0, z: 18 }, max: { x: 16.5, y: 18, z: -100 } });
+  // Outer wall colliders are manual so the visuals can stay thin. Boxes always
+  // run min -> max on every axis; the indoor shell is 118 m long, so getting
+  // this order wrong would silently disable the walls.
+  colliders.push({ min: { x: -16.5, y: 0, z: -100 }, max: { x: -16, y: 18, z: 18 } });
+  colliders.push({ min: { x: 16, y: 0, z: -100 }, max: { x: 16.5, y: 18, z: 18 } });
   colliders.push({ min: { x: -16.5, y: 0, z: 18 }, max: { x: 16.5, y: 18, z: 18.5 } });
   colliders.push({ min: { x: -16.5, y: 0, z: -100.5 }, max: { x: 16.5, y: 18, z: -100 } });
-  colliders.push({ min: { x: -16.5, y: 18, z: 18 }, max: { x: 16.5, y: 18.5, z: -100 } });
+  colliders.push({ min: { x: -16.5, y: 18, z: -100 }, max: { x: 16.5, y: 18.5, z: 18 } });
 
   // Tesseract cladding on the long walls.
   for (const x of [-15.96, 15.96]) {
@@ -406,7 +423,7 @@ export async function buildIndoorWorld(renderer: THREE.WebGLRenderer, assets: As
       curveSegments: 16,
     });
     geo.translate(0, 0, -thickness / 2);
-    const wall = new THREE.Mesh(geo, wallMat);
+    const wall = new THREE.Mesh(geo, wallCladMat);
     wall.position.z = z;
     wall.castShadow = true;
     wall.receiveShadow = true;
@@ -510,6 +527,7 @@ export async function buildIndoorWorld(renderer: THREE.WebGLRenderer, assets: As
   };
   for (const r of [ramp1, ramp2, ramp3]) {
     ramps.push(r);
+    colliders.push(...rampColliders(r));
     scene.add(wedgeMesh(r, rampMat));
     scene.add(rampEdge(r, r.minX + 0.12, amberGlow));
     scene.add(rampEdge(r, r.maxX - 0.12, cyanGlow));
@@ -543,10 +561,10 @@ export async function buildIndoorWorld(renderer: THREE.WebGLRenderer, assets: As
     addBox(scene, colliders, darkMetal, x, 2.3, z, 0.38, 4.6, 0.38, true, true);
   }
 
-  // Low edge rails make the deck readable without blocking the route.
-  for (const x of [-15.7, 5.55]) {
-    addBox(scene, colliders, bronze, x, 5.45, -29, 0.08, 0.7, 30, true, false);
-  }
+  // Low edge rails make the deck readable without walling off the route. The
+  // east rail stops at z = -27 so the run can step across to the down-ramp.
+  addBox(scene, colliders, bronze, -15.7, 5.45, -29, 0.08, 0.7, 30, true, false);
+  addBox(scene, colliders, bronze, 5.55, 5.45, -35.5, 0.08, 0.7, 17, true, false);
 
   // End deck, six metres up.
   platforms.push({ minX: -16, maxX: 16, minZ: -98, maxZ: -86, top: 6 });
@@ -656,14 +674,14 @@ export async function buildIndoorWorld(renderer: THREE.WebGLRenderer, assets: As
     scene.add(mesh);
   };
 
-  floorSign(0, 13.2, 'START', '#78e6b0', 'ARM · FOLLOW THE LIGHT', 5.0, 2.5);
+  floorSign(0, 7.8, 'START', '#78e6b0', 'ARM · FOLLOW THE LIGHT', 5.0, 2.5);
   wallSign(0, 8.0, 2.38, 'FOLLOW', '#ffb15c', 'THE LIGHT', 6.0, 3.0);
   floorSign(0, 5.2, '01', '#ffb15c', 'ARCH', 2.4, 1.2);
   floorSign(0, -18.5, 'CLIMB', '#ffb15c', 'RING 02', 4.2, 2.1, 5.04);
   floorSign(2.5, -25.5, 'DOWN', '#78e6b0', 'RAMP →', 3.8, 1.9, 5.04);
   wallSign(7.5, 7.9, -43.7, 'DROP', '#78e6b0', 'SQUARE 03', 5.2, 2.6);
-  floorSign(-4, -48, 'LEFT', '#ffb15c', 'SLOT 04', 3.6, 1.8);
-  floorSign(2, -57, 'RIGHT', '#ffb15c', 'HEX 05', 3.6, 1.8);
+  floorSign(-8, -48, 'LEFT', '#ffb15c', 'SLOT 04', 3.6, 1.8);
+  floorSign(8, -57, 'RIGHT', '#ffb15c', 'HEX 05', 3.6, 1.8);
   floorSign(0, -65, 'CLIMB', '#ffb15c', 'RAMP 06', 3.8, 1.9);
   floorSign(0, -84.8, '06', '#78e6b0', 'CLIMB OUT', 2.4, 1.2, 6.04);
   floorSign(0, -93.5, 'END', '#ffb15c', 'R TO FLY AGAIN', 4.8, 2.4, 6.04);
@@ -712,7 +730,7 @@ export async function buildIndoorWorld(renderer: THREE.WebGLRenderer, assets: As
   // Start pad + finish pad.
   const startRing = new THREE.Mesh(new THREE.RingGeometry(1.6, 1.76, 48), cyanGlow);
   startRing.rotation.x = -Math.PI / 2;
-  startRing.position.set(0, 0.04, 13.2);
+  startRing.position.set(0, 0.04, 10.8);
   scene.add(startRing);
   const endRing = new THREE.Mesh(new THREE.RingGeometry(1.8, 1.98, 48), amberGlow);
   endRing.rotation.x = -Math.PI / 2;
@@ -771,7 +789,7 @@ export async function buildIndoorWorld(renderer: THREE.WebGLRenderer, assets: As
     dust,
     puddles: [],
     spawn: { x: 0, y: 0.06, z: 14 },
-    overview: { pos: [0, 16.5, 18], look: [0, 4, -88] },
+    overview: { pos: [0, 9.5, -2], look: [0, 4, -40] },
     grade: {
       bloomThreshold: 0.72,
       bloom: 0.34,
