@@ -5,6 +5,7 @@ import { InputClient } from './input';
 import { buildWorld } from './scene';
 import { buildIndoorWorld } from './indoor';
 import { PostFX } from './post';
+import { SimAudio } from './audio';
 import type { World, WorldKind } from './world';
 
 const canvas = document.getElementById('view') as HTMLCanvasElement;
@@ -54,7 +55,6 @@ let chase = false;
 let overview = false;
 let analog = false;
 let analogMix = 0;
-let muted = false;
 let wasCrashed = false;
 let flash = 0;
 let menuOpen = true;
@@ -71,6 +71,7 @@ function setWorld(kind: WorldKind): void {
   const next = worlds[kind];
   activeWorld = next;
   activeKind = kind;
+  audio.setEnvironment(kind === 'indoor' ? 'indoor' : 'outdoor');
   sim.spawn = { ...next.spawn };
   sim.colliders = next.colliders;
   sim.ramps = next.ramps;
@@ -140,7 +141,10 @@ function reset() {
 }
 
 function onKey(code: string) {
-  if (code === 'KeyM') muted = !muted;
+  if (code === 'KeyM') {
+    audio.toggleMuted();
+    syncAudioUi();
+  }
 
   if (menuOpen) {
     if (code === 'Digit1') startMode('airfield');
@@ -168,116 +172,7 @@ function onKey(code: string) {
 }
 
 // ---------------------------------------------------------------- audio
-class MotorAudio {
-  private ctx: AudioContext | null = null;
-  private oscA: OscillatorNode | null = null;
-  private oscB: OscillatorNode | null = null;
-  private oscC: OscillatorNode | null = null;
-  private gain: GainNode | null = null;
-  private windGain: GainNode | null = null;
-
-  ensure() {
-    if (this.ctx) {
-      void this.ctx.resume();
-      return;
-    }
-    const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!Ctor) return;
-    const ctx = new Ctor();
-
-    const gain = ctx.createGain();
-    gain.gain.value = 0;
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 2600;
-    filter.Q.value = 0.8;
-
-    const a = ctx.createOscillator();
-    a.type = 'sawtooth';
-    a.frequency.value = 110;
-    const b = ctx.createOscillator();
-    b.type = 'square';
-    b.frequency.value = 166;
-    const c = ctx.createOscillator();
-    c.type = 'sawtooth';
-    c.frequency.value = 223;
-    const cGain = ctx.createGain();
-    cGain.gain.value = 0.35;
-
-    a.connect(filter);
-    b.connect(filter);
-    c.connect(cGain);
-    cGain.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-
-    // rushing air when the quad moves
-    const noiseLen = ctx.sampleRate * 2;
-    const noise = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
-    const data = noise.getChannelData(0);
-    for (let i = 0; i < noiseLen; i++) data[i] = Math.random() * 2 - 1;
-    const src = ctx.createBufferSource();
-    src.buffer = noise;
-    src.loop = true;
-    const windFilter = ctx.createBiquadFilter();
-    windFilter.type = 'bandpass';
-    windFilter.frequency.value = 620;
-    windFilter.Q.value = 0.5;
-    const windGain = ctx.createGain();
-    windGain.gain.value = 0;
-    src.connect(windFilter);
-    windFilter.connect(windGain);
-    windGain.connect(ctx.destination);
-
-    a.start();
-    b.start();
-    c.start();
-    src.start();
-
-    this.ctx = ctx;
-    this.oscA = a;
-    this.oscB = b;
-    this.oscC = c;
-    this.gain = gain;
-    this.windGain = windGain;
-  }
-
-  update(level: number, armed: boolean, speed: number) {
-    if (!this.ctx || !this.oscA || !this.oscB || !this.oscC || !this.gain) return;
-    const target = armed ? 0.005 + level * 0.05 : 0;
-    this.gain.gain.setTargetAtTime(muted ? 0 : target, this.ctx.currentTime, 0.05);
-    const f = 90 + level * 680;
-    this.oscA.frequency.setTargetAtTime(f, this.ctx.currentTime, 0.03);
-    this.oscB.frequency.setTargetAtTime(f * 1.51, this.ctx.currentTime, 0.03);
-    this.oscC.frequency.setTargetAtTime(f * 2.03, this.ctx.currentTime, 0.03);
-    if (this.windGain) {
-      const wind = armed ? Math.min(0.05, speed * 0.004) : 0;
-      this.windGain.gain.setTargetAtTime(muted ? 0 : wind, this.ctx.currentTime, 0.15);
-    }
-  }
-
-  /** Small confirmation note when a training portal is cleared. */
-  chime(finish = false): void {
-    if (!this.ctx || muted) return;
-    const ctx = this.ctx;
-    const t = ctx.currentTime;
-    const notes = finish ? [660, 880, 1320] : [740, 1110];
-    notes.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const g = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, t + i * 0.075);
-      g.gain.setValueAtTime(0, t + i * 0.075);
-      g.gain.linearRampToValueAtTime(0.055, t + i * 0.075 + 0.012);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.075 + 0.24);
-      osc.connect(g);
-      g.connect(ctx.destination);
-      osc.start(t + i * 0.075);
-      osc.stop(t + i * 0.075 + 0.26);
-    });
-  }
-}
-const audio = new MotorAudio();
+const audio = new SimAudio();
 
 // ---------------------------------------------------------------- hud
 function el<T extends HTMLElement>(id: string): T {
@@ -310,6 +205,7 @@ const hud = {
   modePill: el<HTMLDivElement>('modePill'),
   banner: el<HTMLDivElement>('banner'),
   vignette: el<HTMLDivElement>('vignette'),
+  soundPill: el<HTMLDivElement>('soundPill'),
   helpPhone: el<HTMLSpanElement>('helpPhone'),
   help: el<HTMLDivElement>('help'),
   boot: el<HTMLDivElement>('boot'),
@@ -318,6 +214,21 @@ const hud = {
 const menuEl = el<HTMLDivElement>('menu');
 const resumeBtn = el<HTMLButtonElement>('resumeBtn');
 const mapBtn = el<HTMLButtonElement>('mapBtn');
+const muteBtn = el<HTMLButtonElement>('muteBtn');
+const muteTxt = el<HTMLSpanElement>('muteTxt');
+const volSlider = el<HTMLInputElement>('volSlider');
+const volOut = el<HTMLOutputElement>('volOut');
+
+function syncAudioUi(): void {
+  const pct = Math.round(audio.volume * 100);
+  volSlider.value = String(pct);
+  volOut.textContent = `${pct}%`;
+  muteBtn.classList.toggle('off', audio.muted);
+  muteBtn.setAttribute('aria-pressed', String(audio.muted));
+  muteTxt.textContent = audio.muted ? 'MUTED' : 'SOUND ON';
+  hud.soundPill.hidden = !audio.muted;
+}
+syncAudioUi();
 
 // Screenshot aid: ?hud=0 hides the overlays so docs and thumbnails stay clean.
 if (new URLSearchParams(window.location.search).get('hud') === '0') {
@@ -332,6 +243,16 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('[data-map]'))
 }
 resumeBtn.addEventListener('click', () => resumeSession());
 mapBtn.addEventListener('click', () => openMenu(true));
+muteBtn.addEventListener('click', () => {
+  audio.ensure();
+  audio.toggleMuted();
+  syncAudioUi();
+});
+volSlider.addEventListener('input', () => {
+  audio.ensure();
+  audio.setVolume(Number(volSlider.value) / 100);
+  syncAudioUi();
+});
 
 function setBanner(text: string | null, kind: 'lost' | 'crashed' | null = null) {
   if (!text) {
@@ -540,7 +461,7 @@ function frame(now: number) {
     accumulator = 0;
   }
 
-  const armed = !menuOpen && sim.state.motors.some((m) => m > 0.01);
+  const armedSignal = input.read().armed && !sim.state.crashed;
 
   if (sim.state.crashed && !wasCrashed) {
     flash = 0.55;
@@ -553,10 +474,11 @@ function frame(now: number) {
 
   if (!menuOpen && activeWorld.training && !courseComplete && !sim.state.crashed) {
     tmpV.set(sim.state.pos.x, sim.state.pos.y, sim.state.pos.z);
+    const step = activeWorld.training.index;
     const result = activeWorld.training.update(tmpV, now);
     if (result.passed) {
       flash = Math.max(flash, 0.07);
-      audio.chime(result.complete);
+      audio.portal(step, result.complete);
     }
     if (result.complete) courseComplete = true;
   }
@@ -574,7 +496,19 @@ function frame(now: number) {
     }
   }
 
-  audio.update(level, armed, Math.hypot(sim.state.vel.x, sim.state.vel.y, sim.state.vel.z));
+  const s = sim.state;
+  audio.update({
+    motors: s.motors,
+    armed: armedSignal,
+    crashed: s.crashed,
+    paused: menuOpen,
+    speed: Math.hypot(s.vel.x, s.vel.y, s.vel.z),
+    verticalSpeed: s.vel.y,
+    bumps: s.bumps,
+    bumpSpeed: s.bumpSpeed,
+    landings: s.landings,
+    landingImpact: s.landingImpact,
+  });
   activeWorld.dust.rotation.y += dt * 0.008;
   analogMix += ((analog ? 1 : 0) - analogMix) * (1 - Math.exp(-dt * 7));
   flash = Math.max(0, flash - dt * 1.6);
@@ -671,6 +605,7 @@ setTimeout(() => hud.boot.remove(), 700);
   camera,
   post,
   assets,
+  audio,
   quality: () => ({ qualityScale, qualityStage, dpr: renderer.getPixelRatio(), fpsEma }),
 };
 (window as unknown as { THREE: unknown }).THREE = THREE;

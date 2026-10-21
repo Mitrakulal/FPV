@@ -92,6 +92,14 @@ export interface QuadState {
   voltage: number;
   crashed: boolean;
   time: number;
+  /**
+   * Monotonic event counters. The renderer polls these once per frame to play
+   * contact audio without the physics having to know about the audio graph.
+   */
+  bumps: number;
+  bumpSpeed: number;
+  landings: number;
+  landingImpact: number;
 }
 
 export interface Collider {
@@ -184,6 +192,10 @@ export class QuadSim {
       voltage: this.params.packVolts,
       crashed: false,
       time: 0,
+      bumps: 0,
+      bumpSpeed: 0,
+      landings: 0,
+      landingImpact: 0,
     };
   }
 
@@ -232,6 +244,10 @@ export class QuadSim {
     const impact = Math.max(0, -s.vel.y);
     s.pos.y = top + 0.02;
     s.vel.y = 0;
+    if (impact > 1.2) {
+      s.landings++;
+      s.landingImpact = impact;
+    }
     if (impact > 2) {
       s.vel.x *= 0.75;
       s.vel.z *= 0.75;
@@ -516,6 +532,8 @@ export class QuadSim {
             w.z = 0;
           } else {
             // soft bounce: kill the into-the-face speed, keep most of the slide
+            s.bumps++;
+            s.bumpSpeed = hitSpeed;
             if (e.axis === 'x') {
               s.vel.x = -v * 0.25;
               s.vel.y *= 0.85;
@@ -539,6 +557,10 @@ export class QuadSim {
     if (s.pos.y <= 0.02) {
       s.pos.y = 0.02;
       const down = -s.vel.y; // how hard it comes down
+      if (down > 1.2) {
+        s.landings++;
+        s.landingImpact = down;
+      }
       const horiz = Math.hypot(s.vel.x, s.vel.z);
       s.vel.x = 0;
       s.vel.z = 0;

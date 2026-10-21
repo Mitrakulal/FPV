@@ -241,6 +241,10 @@ body {
   color: var(--dim);
 }
 
+.pill.muted {
+  color: var(--warn);
+}
+
 .thrwrap {
   display: flex;
   align-items: flex-end;
@@ -588,6 +592,113 @@ body.hide-hud .help {
   font-weight: 600;
 }
 
+.menu-foot-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.menu-audio {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.audio-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 9px;
+  border: 1px solid rgb(53 224 138 / 0.32);
+  background: rgb(53 224 138 / 0.06);
+  color: #8ef0b7;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.audio-toggle:hover,
+.audio-toggle:focus-visible {
+  background: rgb(53 224 138 / 0.14);
+  border-color: rgb(53 224 138 / 0.6);
+  outline: none;
+}
+
+.audio-toggle.off {
+  border-color: rgb(255 176 32 / 0.4);
+  background: rgb(255 176 32 / 0.07);
+  color: #ffc46b;
+}
+
+.audio-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.volume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: #607387;
+  cursor: pointer;
+}
+
+.volume input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 118px;
+  height: 3px;
+  background: rgb(200 225 245 / 0.16);
+  cursor: pointer;
+  outline: none;
+}
+
+.volume input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgb(53 224 138 / 0.7);
+}
+
+.volume input[type="range"]::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgb(53 224 138 / 0.7);
+}
+
+.volume input[type="range"]:focus-visible {
+  outline: 1px solid rgb(53 224 138 / 0.5);
+  outline-offset: 4px;
+}
+
+.volume output {
+  min-width: 30px;
+  color: #9fb2c5;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 .resume-btn {
   flex: none;
   padding: 10px 18px;
@@ -632,6 +743,18 @@ body.hide-hud .help {
   .menu-foot {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .menu-foot-main {
+    width: 100%;
+  }
+
+  .menu-audio {
+    gap: 10px;
+  }
+
+  .volume input[type="range"] {
+    width: min(160px, 38vw);
   }
 
   .resume-btn {

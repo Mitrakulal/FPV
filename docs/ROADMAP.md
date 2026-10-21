@@ -12,7 +12,7 @@ what is being tuned, and what comes next.
 | 2 | Flight model, airfield, cameras, crash and restart | Complete |
 | 3 | Feel tuning with a real pilot; air mode; in-sim tuning panel | In progress |
 | 4 | Indoor start-to-finish training course, portal progress, ramps | Complete |
-| 5 | Visual and performance polish, OSD refinements | In progress |
+| 5 | Visual, audio and performance polish, OSD refinements | In progress |
 | 6 | Optional virtual-gamepad bridge for third-party sims | Exploratory |
 
 ## Next up
@@ -25,8 +25,8 @@ what is being tuned, and what comes next.
    start-menu previews for both worlds.
 4. **Visual polish.** Near-field asphalt detail, runway and gate scale, distant grass,
    warehouse materials, tyre walls and pallet stacks.
-5. **Camera and audio polish.** More tilt range, a cleaner analog mode, RPM/wind audio
-   balance and a mute state that survives reloads.
+5. **Camera polish.** A cleaner analog mode and more camera options. The synthesised audio
+   engine is in place, with persistent volume and mute.
 
 ## Current limitations
 
@@ -34,6 +34,8 @@ what is being tuned, and what comes next.
 - No lap timer, ghost or session statistics; the indoor course is a linear, untimed run with
   portal progress.
 - No in-sim rates/PID/camera panel.
+- Sound is synthesised rather than sampled, and positional audio is limited to per-motor
+  panning.
 - The launcher and ADB helper are Windows-specific.
 - No multiplayer, cloud hosting or native mobile app.
 - The maps and props are static; colliders are boxes and analytic ramp/platform surfaces,

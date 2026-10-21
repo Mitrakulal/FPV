@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="theme-color" content="#05070a" />
     <title>FPV Rig — sim</title>
-    <link rel="stylesheet" href="./hud.css?v=12" />
+    <link rel="stylesheet" href="./hud.css?v=13" />
   </head>
   <body>
     <canvas id="view"></canvas>
@@ -54,6 +54,7 @@
       <div class="corner bc">
         <div class="pill mono" id="armPill">DISARMED</div>
         <div class="pill mono dim" id="modePill">ACRO</div>
+        <div class="pill mono dim" id="soundPill" hidden>MUTED</div>
       </div>
 
       <div id="banner" class="banner" hidden></div>
@@ -89,11 +90,24 @@
         </div>
 
         <footer class="menu-foot">
-          <div class="menu-controls">
-            <span><b>W/S</b> throttle</span>
-            <span><b>A/D</b> yaw</span>
-            <span><b>ARROWS</b> pitch / roll</span>
-            <span><b>1 / 2</b> maps · <b>SPACE</b> arm · <b>R</b> restart · <b>ESC</b> maps</span>
+          <div class="menu-foot-main">
+            <div class="menu-controls">
+              <span><b>W/S</b> throttle</span>
+              <span><b>A/D</b> yaw</span>
+              <span><b>ARROWS</b> pitch / roll</span>
+              <span><b>1 / 2</b> maps · <b>SPACE</b> arm · <b>R</b> restart · <b>ESC</b> maps</span>
+            </div>
+            <div class="menu-audio">
+              <button class="audio-toggle" id="muteBtn" type="button" aria-pressed="false">
+                <span class="audio-dot" aria-hidden="true"></span>
+                <span id="muteTxt">SOUND ON</span>
+              </button>
+              <label class="volume" for="volSlider">
+                <span>VOL</span>
+                <input id="volSlider" type="range" min="0" max="100" step="1" value="70" />
+                <output id="volOut" for="volSlider">70%</output>
+              </label>
+            </div>
           </div>
           <button class="resume-btn" id="resumeBtn" type="button" hidden>RESUME FLIGHT</button>
         </footer>
@@ -106,6 +120,6 @@
       <span id="helpPhone">phone: open /tx/ over adb reverse</span>
     </div>
 
-    <script type="module" src="./sim.js?v=12"></script>
+    <script type="module" src="./sim.js?v=13"></script>
   </body>
 </html>

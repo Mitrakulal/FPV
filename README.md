@@ -54,6 +54,9 @@ possible but is not part of the current build.
   start-to-finish tesseract course with six portals, three ramps and a mezzanine finish.
 - **Instrumented** — live HUD for RTT, packet rate, physics Hz, FPS, frame time, voltage,
   altitude, speed, tilt and course progress.
+- **Generated onboard audio** — four motor voices that follow RPM, speed wind, prop wash,
+  contact thuds, portal bells and a hall reverb indoors. No audio files and no downloads;
+  volume and mute persist between sessions.
 
 ## How it works
 
@@ -126,7 +129,7 @@ R            restart from the start line
 C / O        chase / overview camera
 [ / ]        camera tilt
 V            analog look
-M            mute audio
+M            mute audio (volume lives in the map menu)
 H            hide the help bar
 Esc          map menu (pause)
 ```
@@ -148,7 +151,7 @@ The keyboard fallback runs ACRO; ANGLE is selected on the phone's top-right togg
 | Analog look | — | `V` |
 | Map menu | **MAPS** button | `Esc` |
 | Pick map | — | `1` / `2` in the menu |
-| Mute | — | `M` |
+| Mute / volume | **VOL** slider in the map menu | `M` mute |
 | Hide help | — | `H` |
 | TX settings | **SET** | — |
 
@@ -227,6 +230,28 @@ phone's `reset` request.
 - Fully local assets. The large HDR sky and texture set are committed so the sim works
   offline after a build.
 
+### Sound
+
+The audio is generated at runtime in `apps/sim/src/audio.ts`; there are no samples to
+download and the build stays self-contained. It is mixed to sound like a camera microphone
+on the quad rather than a soundtrack:
+
+- **Motors** — four detuned voices, one per corner, with a sine sub and a throttle-tracking
+  low-pass. The four voices are panned slightly for width and beat against each other
+  instead of forming one synthetic tone.
+- **Air** — speed-scaled wind, a band-passed hiss layer and a separate prop-wash rumble while
+  descending. The outdoor world adds a quiet wind bed and occasional distant birds; the
+  indoor world swaps that for a hall rumble and more reverb.
+- **Events** — two-tone arm/disarm beeps, soft touchdown thuds, a filtered knock on light
+  contact, a short crash impact, and a pentatonic bell ladder for the six training portals.
+  A bumped prop or a gate is audible but does not dominate.
+- **Mix** — a master compressor and gentle high-shelf tame peaks; the indoor map uses a
+  generated convolution reverb, the airfield is nearly dry. Volume and mute are stored in
+  `localStorage`, and the master volume is in the map menu so it can be set before flying.
+
+The physics exposes monotonic `bumps` and `landings` counters, so contact audio is driven by
+real collisions rather than heuristics in the renderer.
+
 ## The maps
 
 Both maps are built at load and switched from the start menu, so changing world is instant.
@@ -276,7 +301,7 @@ Numbers from the development machine (Windows, Chrome, USB-tethered Android phon
 | Physics tick rate | 1,000–1,100 Hz |
 | Phone page send rate | 140–250 Hz (browser timer limits) |
 | Render loop | GPU-bound; live frame time is shown in the HUD |
-| Unit tests | 29 |
+| Unit tests | 31 |
 
 The physics tick is independent of render frame rate: a slow frame does not slow the
 flight model, and the HUD exposes both rates so the claim is checkable. Frame time depends on
@@ -302,10 +327,11 @@ fpv/
 │  │     ├─ park.ts        skate park, ramps, entrance, street props
 │  │     ├─ indoor.ts      tesseract course, portals, decks, lighting
 │  │     ├─ training.ts    ordered portal crossings, progress, glow
+│  │     ├─ audio.ts       synthesised motors, wind, reverb and event sounds
 │  │     ├─ post.ts        HDR pipeline, bloom, grading, analog look
 │  │     ├─ quad.ts        quad model and rotor visuals
 │  │     ├─ assets.ts      texture/HDR loading
-│  │     └─ main.ts        render loop, map menu, cameras, HUD, audio
+│  │     └─ main.ts        render loop, map menu, cameras, HUD
 │  └─ tx/                  phone transmitter page
 ├─ packages/protocol/      22-byte frame codec, shared by all three apps
 ├─ tests/                  physics + protocol unit tests
@@ -336,7 +362,7 @@ The server binds to `127.0.0.1:8080`. The sim accepts `?map=airfield|indoor`,
 ## Testing
 
 ```bat
-npm test                    :: 29 physics + protocol tests
+npm test                    :: 31 physics + protocol tests
 npm run typecheck           :: strict TypeScript check
 node tools/smoke.ts         :: server up, pages served, 250 Hz relay, phone reset
 node tools/tx-test.mjs      :: touch drag, throttle hold, arm guard (server must run)

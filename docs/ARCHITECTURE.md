@@ -102,6 +102,8 @@ unit-tested directly.
 - Orientation as a normalized quaternion; body rates in rad/s.
 - Four motor states and four thrust values.
 - Battery voltage, integral terms, previous rates, crash flag and run time.
+- Monotonic bump/landing counters and their impact speeds. They do not feed back into the
+  model; they are an event channel for the renderer and audio layer.
 
 The body axes follow the physics convention `+X = nose up`, `+Y = nose left`,
 `+Z = roll left`. The renderer maps these to the quad model; the input layer converts the
@@ -213,7 +215,9 @@ Two extra primitives let a map build ramps and decks without triangle-mesh colli
 `step()` resolves landing surfaces before box colliders. Ground/ramp/deck contact zeroes
 vertical and angular velocity; a landing only counts if the quad was already at or above
 that surface, so flying into the side of a deck cannot snap the quad on top. The same
->15 m/s and >83° crash thresholds apply on raised surfaces.
+>15 m/s and >83° crash thresholds apply on raised surfaces. Non-fatal contacts increment
+`bumps`; ground, ramp and deck touchdowns above 1.2 m/s increment `landings` and record the
+impact speed. The renderer uses those counters for sound only; they never alter the model.
 
 ## Rendering
 
@@ -236,6 +240,50 @@ that surface, so flying into the side of a deck cannot snap the quad on top. The
   stacks, pallets, barrels, poles, trees, a windsock, five gates and a skate park. The indoor
   world is a 32 m × 118 m tesseract-clad course with six portals, three ramps, a mezzanine
   and an end deck. Colliders are simple boxes derived from the props, not triangle meshes.
+
+## Audio
+
+`apps/sim/src/audio.ts` synthesises every sound with the Web Audio API. There are no audio
+files, so the sound design cannot break the offline rule or add to the asset download.
+
+```text
+4 motor voices ─┐
+wind + wash ────┴─► motor bus ─┐
+arm/crash/bell ───► sfx bus ───┼─► mic HP/LP ─► master ─► limiter ─► analyser ─► out
+ambience ─────────► ambience bus┘
+                         │
+buses ─► send ─► HP ─► convolution reverb ─► LP ─► wet gain ─► mix
+```
+
+- **Motor voices.** Each of the four motors gets a saw pair and a sine sub. The pair is
+  detuned a few cents, the fundamental tracks `64 Hz + level * 268 Hz`, and a low-pass opens
+  from 520 Hz to about 4.8 kHz with throttle. This avoids the single shrill oscillator that
+  makes cheap sim audio tiring. The voices are panned by motor position.
+- **Air and ambience.** Wind has a low rush and a high hiss, both scaled by airspeed. Prop
+  wash is a separate band-passed noise layer gated by descent rate. The airfield adds a wind
+  bed, leaves and sparse bird calls; the indoor map adds a low hall tone. A slow LFO moves
+  the wind filters so the loop is not obvious.
+- **Events.** Arm/disarm use two short triangle beeps. Touchdowns are a low sine thud scaled
+  by `landingImpact`; soft contacts are a band-passed knock scaled by `bumpSpeed`; crashes
+  combine a sub thud and a filtered noise crunch. The six portal crossings climb a C-major
+  pentatonic ladder and completion plays a short arpeggio. Event sounds are throttled so a
+  scrape along a wall cannot machine-gun the mix.
+- **Reverb by map.** One generated stereo impulse is shared. `setEnvironment('indoor')`
+  raises the motor/SFX sends and the wet gain; the outdoor mix stays nearly dry. The send is
+  high-passed at 260 Hz and the return low-passed at 4.5 kHz so the low motor does not turn
+  to mud.
+- **Master chain.** The mix passes a 38 Hz high-pass, 15 kHz low-pass and a −2.5 dB high
+  shelf to emulate a camera mic. A compressor/limiter catches crash peaks. Default volume is
+  70%; the map menu exposes a slider, `M` mutes, and both values persist in `localStorage`.
+- **Lifecycle.** The graph is created on the first pointer/key gesture, resumed if the
+  browser suspends it, suspended after the tab is hidden, and faded rather than stopped when
+  the map menu pauses the sim. The armed/crashed state and the bump/landing counters drive
+  contact and status sounds, so the audio layer does not guess from positions.
+
+**Why synthesised?** Samples would either be large or repetitive, and layering a few
+oscillators and noise sources gives RPM tracking for free. It also keeps the whole project
+offline and zero-cost. The trade-off is that the result is an impression of a quad, not a
+field recording.
 
 ## Latency
 

@@ -154,6 +154,33 @@ test('light obstacle contact bounces instead of ending the run', () => {
   assert.ok(s.state.vel.x > 0, `vel.x ${s.state.vel.x}`);
 });
 
+test('a soft contact raises a bump event for audio', () => {
+  const s = sim();
+  s.reset();
+  s.colliders = [{ min: { x: -0.5, y: 0, z: -0.5 }, max: { x: 0.5, y: 2, z: 0.5 } }];
+  s.state.pos = { x: 0.62, y: 1, z: 0 };
+  s.state.vel = { x: -3, y: 0, z: 0 };
+  for (let i = 0; i < 100; i++) s.step(DT, idle);
+  assert.equal(s.state.crashed, false);
+  assert.ok(s.state.bumps > 0, `bumps ${s.state.bumps}`);
+  assert.ok(s.state.bumpSpeed > 1, `bump speed ${s.state.bumpSpeed}`);
+});
+
+test('a landing records its impact once for audio', () => {
+  const s = sim();
+  s.reset();
+  s.state.pos = { x: 0, y: 2, z: 0 };
+  s.state.vel = { x: 0, y: -4, z: 0 };
+  for (let i = 0; i < 1000; i++) s.step(DT, idle);
+  assert.equal(s.state.crashed, false);
+  assert.equal(s.state.landings, 1);
+  assert.ok(s.state.landingImpact > 1.2, `impact ${s.state.landingImpact}`);
+
+  // Sitting on the ground must not keep re-triggering the touchdown sound.
+  for (let i = 0; i < 1000; i++) s.step(DT, idle);
+  assert.equal(s.state.landings, 1);
+});
+
 test('hard obstacle hit still crashes', () => {
   const s = sim();
   s.reset();
