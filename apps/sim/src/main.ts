@@ -315,7 +315,9 @@ function updateCamera(dt: number, now: number) {
     camera.updateProjectionMatrix();
   }
 
-  activeWorld.quad.group.visible = chase || overview;
+  // FPV is the only mode where the airframe would sit inside the camera.
+  // Chase, overview and the debug camera all want to see the model.
+  activeWorld.quad.setFirstPerson(!chase && !overview && !debugLook);
 
   if (debugLook && debugLook.length >= 6) {
     camera.position.set(debugLook[0]!, debugLook[1]!, debugLook[2]!);
@@ -345,8 +347,10 @@ function updateCamera(dt: number, now: number) {
     return;
   }
 
-  // FPV: camera sits in the pod, tilted up relative to the frame
-  tmpV.set(0, 0.035, -0.05).applyQuaternion(q);
+  // FPV: camera sits in the pod, tilted up relative to the frame. The lens rides
+  // above the prop plane like a real stack, so the front blades sweep through
+  // the bottom corners instead of sitting edge-on at the frustum edge.
+  tmpV.set(0, 0.055, -0.05).applyQuaternion(q);
   camera.position.set(s.pos.x + tmpV.x, s.pos.y + tmpV.y, s.pos.z + tmpV.z);
 
   tiltQ.setFromAxisAngle(X_AXIS, camTilt);
@@ -362,7 +366,7 @@ function updateCamera(dt: number, now: number) {
 }
 
 function updateMenuCamera(now: number) {
-  activeWorld.quad.group.visible = true;
+  activeWorld.quad.setFirstPerson(false);
   if (debugLook && debugLook.length >= 6) {
     camera.position.set(debugLook[0]!, debugLook[1]!, debugLook[2]!);
     camera.lookAt(debugLook[3]!, debugLook[4]!, debugLook[5]!);
@@ -484,16 +488,18 @@ function frame(now: number) {
   }
 
   // props + motion discs
+  const quad = activeWorld.quad;
   const level = sim.state.motors.reduce((a, b) => a + b, 0) / 4;
-  for (let i = 0; i < activeWorld.quad.propGroups.length; i++) {
-    const g = activeWorld.quad.propGroups[i];
+  const spinning = armedSignal && !sim.state.crashed;
+  const wash = spinning ? Math.max(0, (level - 0.05) * 0.5) : 0;
+  for (let i = 0; i < quad.propGroups.length; i++) {
+    const g = quad.propGroups[i];
     if (!g) continue;
-    propPhase[i] = (propPhase[i] ?? 0) + dt * (4 + level * 62) * (i % 2 === 0 ? 1 : -1);
+    propPhase[i] =
+      (propPhase[i] ?? 0) + (spinning ? dt * (4 + level * 62) : 0) * (i % 2 === 0 ? 1 : -1);
     g.rotation.y = propPhase[i] ?? 0;
-    const disc = activeWorld.quad.discs[i];
-    if (disc) {
-      (disc.material as THREE.MeshBasicMaterial).opacity = Math.max(0, (level - 0.05) * 0.5);
-    }
+    const disc = quad.discs[i];
+    if (disc) (disc.material as THREE.MeshBasicMaterial).opacity = wash;
   }
 
   const s = sim.state;

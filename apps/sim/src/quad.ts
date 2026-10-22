@@ -4,7 +4,16 @@ export interface QuadModel {
   group: THREE.Group;
   propGroups: THREE.Object3D[];
   discs: THREE.Mesh[];
+  blades: THREE.Mesh[];
   leds: THREE.Mesh[];
+  /** True while the view sits inside the airframe. */
+  firstPerson: boolean;
+  /**
+   * FPV mode. The camera sits inside the airframe, so the body is hidden from
+   * the colour pass while staying in the shadow pass: you get the moving
+   * shadow a real quad throws without staring at the inside of the frame.
+   */
+  setFirstPerson(on: boolean): void;
 }
 
 /**
@@ -13,6 +22,10 @@ export interface QuadModel {
  */
 export function buildQuad(): QuadModel {
   const group = new THREE.Group();
+  // Everything except the props. Kept in its own group so FPV can hide the
+  // colour output of the airframe without dropping it out of the shadow map.
+  const body = new THREE.Group();
+  group.add(body);
 
   const carbon = new THREE.MeshStandardMaterial({
     color: 0x15171b,
@@ -40,6 +53,15 @@ export function buildQuad(): QuadModel {
     metalness: 0.05,
     side: THREE.DoubleSide,
   });
+  // FPV sits between the props: they sweep past as dark translucent blades,
+  // never as solid colour. Same geometry, different material.
+  const fpvPropMat = new THREE.MeshBasicMaterial({
+    color: 0x12171f,
+    transparent: true,
+    opacity: 0.5,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
   const blurMat = new THREE.MeshBasicMaterial({
     color: 0x9fb6cc,
     transparent: true,
@@ -51,15 +73,16 @@ export function buildQuad(): QuadModel {
   const armLen = 0.115;
   const plate = new THREE.Mesh(new THREE.BoxGeometry(0.072, 0.004, 0.108), carbon);
   plate.position.y = 0.008;
-  group.add(plate);
+  body.add(plate);
 
   const topPlate = new THREE.Mesh(new THREE.BoxGeometry(0.058, 0.004, 0.078), carbonEdge);
   topPlate.position.y = 0.042;
-  group.add(topPlate);
+  body.add(topPlate);
 
   // four arms + motors
   const propGroups: THREE.Object3D[] = [];
   const discs: THREE.Mesh[] = [];
+  const blades: THREE.Mesh[] = [];
 
   for (let i = 0; i < 4; i++) {
     const sx = i === 0 || i === 2 ? 1 : -1;
@@ -68,19 +91,19 @@ export function buildQuad(): QuadModel {
     const arm = new THREE.Mesh(new THREE.BoxGeometry(armLen, 0.0045, 0.013), carbon);
     arm.position.set((sx * armLen) / 2, 0.006, (sz * armLen) / 2);
     arm.rotation.y = Math.atan2(sz, sx);
-    group.add(arm);
+    body.add(arm);
 
     const stator = new THREE.Mesh(new THREE.CylinderGeometry(0.0135, 0.0135, 0.012, 18), alloy);
     stator.position.set(sx * armLen, 0.016, sz * armLen);
-    group.add(stator);
+    body.add(stator);
 
     const bell = new THREE.Mesh(new THREE.CylinderGeometry(0.0155, 0.0145, 0.012, 20), anodised);
     bell.position.set(sx * armLen, 0.026, sz * armLen);
-    group.add(bell);
+    body.add(bell);
 
     const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.002, 16), alloy);
     cap.position.set(sx * armLen, 0.0325, sz * armLen);
-    group.add(cap);
+    body.add(cap);
 
     const propGroup = new THREE.Group();
     propGroup.position.set(sx * armLen, 0.035, sz * armLen);
@@ -92,6 +115,7 @@ export function buildQuad(): QuadModel {
       pivot.rotation.y = (b / 3) * Math.PI * 2;
       pivot.add(blade);
       propGroup.add(pivot);
+      blades.push(blade);
     }
     group.add(propGroup);
     propGroups.push(propGroup);
@@ -109,25 +133,25 @@ export function buildQuad(): QuadModel {
     new THREE.MeshStandardMaterial({ color: 0x20242a, roughness: 0.7 }),
   );
   battery.position.set(0, 0.055, 0.004);
-  group.add(battery);
+  body.add(battery);
 
   const strap = new THREE.Mesh(
     new THREE.BoxGeometry(0.058, 0.004, 0.016),
     new THREE.MeshStandardMaterial({ color: 0xd8492b, roughness: 0.8 }),
   );
   strap.position.set(0, 0.066, 0.004);
-  group.add(strap);
+  body.add(strap);
 
   // FPV camera pod, tilted up like a real race cam
   const camPod = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.026, 0.02), carbonEdge);
   camPod.position.set(0, 0.036, -0.05);
   camPod.rotation.x = -0.5;
-  group.add(camPod);
+  body.add(camPod);
 
   const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.009, 0.012, 18), alloy);
   lens.position.set(0, 0.045, -0.06);
   lens.rotation.x = Math.PI / 2 - 0.5;
-  group.add(lens);
+  body.add(lens);
 
   const glass = new THREE.Mesh(
     new THREE.CircleGeometry(0.007, 18),
@@ -139,20 +163,20 @@ export function buildQuad(): QuadModel {
   );
   glass.position.set(0, 0.048, -0.067);
   glass.rotation.x = -0.5;
-  group.add(glass);
+  body.add(glass);
 
   // VTX antenna
   const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.0022, 0.0022, 0.07, 8), carbonEdge);
   antenna.position.set(0, 0.075, 0.055);
   antenna.rotation.x = 0.55;
-  group.add(antenna);
+  body.add(antenna);
 
   const antennaTip = new THREE.Mesh(
     new THREE.SphereGeometry(0.006, 10, 8),
     new THREE.MeshStandardMaterial({ color: 0x6b2fb3, roughness: 0.5 }),
   );
   antennaTip.position.set(0, 0.105, 0.075);
-  group.add(antennaTip);
+  body.add(antennaTip);
 
   // status LEDs
   const leds: THREE.Mesh[] = [];
@@ -169,7 +193,7 @@ export function buildQuad(): QuadModel {
       }),
     );
     led.position.set(sx * armLen, 0.005, sz * armLen + 0.012);
-    group.add(led);
+    body.add(led);
     leds.push(led);
   }
 
@@ -179,6 +203,39 @@ export function buildQuad(): QuadModel {
       o.receiveShadow = false;
     }
   });
+  // Prop wash planes are invisible geometry. If they stay in the shadow pass the
+  // quad throws four solid circles instead of prop blades.
+  for (const d of discs) d.castShadow = false;
 
-  return { group, propGroups, discs, leds };
+  // Airframe-only materials. Flipping colorWrite on these hides the body from
+  // the camera while the meshes still render into the shadow map, so FPV keeps
+  // the moving shadow a real quad throws without showing the frame you sit in.
+  const bodyMaterials = new Set<THREE.Material>();
+  body.traverse((o) => {
+    if (!(o instanceof THREE.Mesh)) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of mats) bodyMaterials.add(m);
+  });
+
+  const model: QuadModel = {
+    group,
+    propGroups,
+    discs,
+    blades,
+    leds,
+    firstPerson: false,
+    setFirstPerson(on: boolean) {
+      model.firstPerson = on;
+      group.visible = true;
+      for (const m of bodyMaterials) {
+        m.colorWrite = !on;
+        m.depthWrite = !on;
+      }
+      // In FPV the front props sweep past the lens. They are redrawn with a dark
+      // translucent material so they read as blur, not solid blue paddles.
+      for (const b of blades) b.material = on ? fpvPropMat : propMat;
+      for (const d of discs) d.visible = !on;
+    },
+  };
+  return model;
 }
