@@ -96,6 +96,7 @@ for (const name of ['adb.exe', 'AdbWinApi.dll', 'AdbWinUsbApi.dll', 'NOTICE.txt'
 }
 
 copyFile(path.join(root, 'LICENSE'), path.join(appDir, 'LICENSE'));
+copy(path.join(root, 'packaging', 'licenses'), path.join(appDir, 'licenses'));
 write(path.join(appDir, 'portable.txt'), 'Portable build: settings and logs live in the data folder next to FPV.exe.\n');
 write(path.join(appDir, 'VERSION.txt'), `${pkg.name} ${version}\nBuilt ${new Date().toISOString()}\n`);
 write(path.join(appDir, 'START-HERE.txt'), [
@@ -122,10 +123,10 @@ write(path.join(appDir, 'START-HERE.txt'), [
 write(path.join(appDir, 'THIRD-PARTY.md'), [
   '# Third-party components',
   '',
-  '- Node.js runtime: MIT and bundled third-party licenses; https://nodejs.org/en/about/legal',
-  '- ws: MIT; see server/node_modules/ws/LICENSE',
-  '- Android platform-tools / adb: Android SDK license; see tools/adb/NOTICE.txt',
-  '- three.js: MIT; served inside the simulator bundle.',
+  '- Node.js runtime: MIT and bundled third-party licenses; see `licenses/NODE-LICENSE.txt`.',
+  '- ws: MIT; see `licenses/WS-LICENSE.txt` and `server/node_modules/ws/LICENSE`.',
+  '- three.js: MIT; see `licenses/THREE-LICENSE.txt`. It is served inside the simulator bundle.',
+  '- Android platform-tools / adb: Android SDK license; see `tools/adb/NOTICE.txt`.',
 ].join('\n') + '\n');
 
 fs.mkdirSync(releaseRoot, { recursive: true });
