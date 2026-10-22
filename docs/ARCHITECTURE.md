@@ -30,6 +30,13 @@ Android Chrome                 Node server                    Laptop Chrome
 - `apps/server/src/server.ts` is bundled into `dist/server.js`.
 - The server serves `apps/server/public` and a single WebSocket endpoint at `/ws`.
 - Clients identify themselves with `?role=tx` or `?role=sim` (the default is `sim`).
+- `apps/launcher/FPVLauncher.cs` is a native WinForms supervisor. It starts the bundled
+  Node runtime, picks a free loopback port, verifies `/health`, runs `adb reverse`, opens the
+  phone page and launches Chrome/Edge in app mode. It is not in the data path; the sim and
+  phone still talk directly through the local server.
+- `packaging/installer/` builds the per-user Setup exe and Uninstall exe. The Setup exe
+  embeds a ZIP payload; the launcher starts the same server and public folder in both
+  portable and installed layouts.
 
 `adb reverse tcp:8080 tcp:8080` maps the phone's loopback port to the laptop. The phone page
 is therefore same-origin with its WebSocket, and the traffic stays inside the USB link. The

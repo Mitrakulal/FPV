@@ -88,35 +88,49 @@ shows `LINK LOST` on the HUD.
 
 ## Quick start
 
-### Requirements
+### Install on Windows (recommended)
 
-- Windows 10 or 11 (the launcher and ADB helper are BAT/PowerShell scripts).
+Run **`FPV-Rig-0.2.0-Setup.exe`** (from the release page, or build it with
+`npm run package:win`). It installs for the current Windows user, needs no administrator
+rights, and bundles Node, the local server and ADB. Node.js does not need to be installed.
+
+1. **Install and open FPV Rig.** The launcher starts the local server, opens the simulator
+   in Chrome/Edge app mode and watches for a phone.
+2. **Prepare the phone.** Enable **Developer options → USB debugging**, connect a
+   **data-capable** USB cable and tap **Allow** on the RSA prompt.
+3. **Wait for the green PHONE dot.** The launcher runs `adb reverse` and opens the
+   transmitter page on the phone automatically. Tap **FULL** on the phone.
+4. **Pick a map.** **AIRFIELD + PARK** is open free flight; **TESSERACT COURSE** is the
+   indoor start-to-finish run. `Esc` reopens the menu at any time, and the **MAPS** button
+   in the top bar does the same.
+5. **Arm and fly.** Pull the throttle to the bottom, tap **DISARMED → ARMED**, raise the
+   throttle to about 36% and fly. In ANGLE, pushing the right stick forward pitches the
+   nose down and moves you forward.
+6. **Restart a run.** Use the **R** button next to **ARM** on the phone or `R` on the
+   keyboard. A restart disarms the phone so the next run cannot start hot.
+
+The portable build is `FPV-Rig-0.2.0-portable.zip`: extract it and run `FPV.exe`. See
+[docs/DESKTOP.md](docs/DESKTOP.md) for installer details, silent classroom deployment,
+uninstall, logs and troubleshooting.
+
+### Run from source
+
+Requirements:
+
+- Windows 10 or 11.
 - Node.js 22 or newer.
 - Chrome or Edge on the laptop.
 - An Android phone with Developer options and USB debugging, plus a data-capable USB cable.
 
-The Node server and web app themselves are platform-neutral; the convenience scripts are
-Windows-specific.
+```bat
+npm install
+npm run launcher
+```
 
-### Run it
-
-1. **Start the laptop side.** Double-click **`run.bat`**. On first run it installs
-   dependencies, builds the app, starts the server and opens
-   <http://127.0.0.1:8080/sim/> at the map menu.
-2. **Pick a map.** **AIRFIELD + PARK** is open free flight; **TESSERACT COURSE** is the
-   indoor start-to-finish run. `Esc` reopens the menu at any time, and the **MAPS** button
-   in the top bar does the same.
-3. **Prepare the phone.** Enable **Developer options → USB debugging**, connect the cable
-   and accept the RSA prompt.
-4. **Open the cable tunnel.** Double-click **`connect-phone.bat`**. It uses the bundled
-   `tools/platform-tools/adb.exe` and runs `adb reverse tcp:8080 tcp:8080`.
-5. **Open the transmitter.** On the phone, open Chrome at
-   **`http://127.0.0.1:8080/tx/`** and tap **FULL**.
-6. **Arm and fly.** Pull the throttle to the bottom, tap **DISARMED → ARMED**, raise the
-   throttle to about 36% and fly. In ANGLE, pushing the right stick forward pitches the
-   nose down and moves you forward.
-7. **Restart a run.** Use the **R** button next to **ARM** on the phone or `R` on the
-   keyboard. A restart disarms the phone so the next run cannot start hot.
+`npm run launcher` builds the app, compiles the native launcher against the development tree
+and opens it. The same launcher then starts the server, connects the phone and opens the
+sim. The older `run.bat` + `connect-phone.bat` workflow is still available if you prefer to
+drive each step manually.
 
 No phone nearby? The keyboard flies the same physics:
 
@@ -311,6 +325,11 @@ the indoor course steps the render scale down to hold the same range, and both m
 
 ## Project layout
 
+The Windows product layer is additive: `apps/launcher/FPVLauncher.cs` is the native GUI,
+`packaging/installer/` contains the Setup/Uninstall sources, and `scripts/build-launcher.mjs`
+and `scripts/package-win.mjs` compile and bundle everything. The resulting app keeps the
+sim, server and phone page unchanged.
+
 ```text
 fpv/
 ├─ apps/
@@ -349,6 +368,8 @@ npm run build       :: dist/server.js + public sim.js/tx.js
 npm start           :: serve on http://127.0.0.1:8080
 npm run watch       :: rebuild on change
 npm run typecheck   :: TypeScript, no emit
+npm run launcher    :: build + compile + open the native Windows launcher
+npm run package:win :: portable ZIP + one-click Setup exe in dist/release
 ```
 
 Build outputs (`dist/`, `apps/server/public/sim/sim.js`,
@@ -393,13 +414,16 @@ rejection and axis conversion.
 | 4 | Indoor training course, ramps, portal progress | Done |
 | 5 | Visual and performance polish, OSD refinements | In progress |
 | 6 | Optional ViGEm bridge for third-party sims | Exploratory |
+| 7 | Native Windows launcher, portable ZIP, per-user installer | Done |
 
 Current limitations, stated plainly: **air mode / idle-up is not implemented**; the indoor
 course is deliberately linear and untimed, and there is no lap timer, split or ghost; the
-in-sim rates/PID/camera panel is not built; the convenience scripts target Windows. The
-flight model, ANGLE/ACRO modes, crash model, two maps and phone link are working and
-tested. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the next steps and
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the implementation details.
+in-sim rates/PID/camera panel is not built; the native launcher and installer target Windows
+(the server itself remains platform-neutral); the installer is unsigned. The flight model,
+ANGLE/ACRO modes, crash model, two maps and phone link are working and tested. See
+[`docs/ROADMAP.md`](docs/ROADMAP.md) for the next steps,
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the implementation details, and
+[`docs/DESKTOP.md`](docs/DESKTOP.md) for the Windows install, deployment and support guide.
 
 ## Credits
 
