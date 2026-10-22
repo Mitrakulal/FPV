@@ -239,8 +239,10 @@ phone's `reset` request.
   a toggleable analog look.
 - Adaptive render scale based on viewport size, plus runtime quality reduction when frame
   time slips.
-- FPV camera at the body centre with adjustable tilt and speed-dependent FOV; springy chase
-  camera; free overview camera.
+- FPV camera in the pod, above the prop plane, with adjustable tilt and speed-dependent FOV.
+  Front props sweep through the bottom corners as dark blur, and the airframe stays in the
+  shadow pass so the quad still throws a shadow while you fly it. Springy chase camera;
+  free overview camera.
 - Fully local assets. The large HDR sky and texture set are committed so the sim works
   offline after a build.
 

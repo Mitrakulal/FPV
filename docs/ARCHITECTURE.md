@@ -238,9 +238,12 @@ impact speed. The renderer uses those counters for sound only; they never alter 
   steps the internal scale down (0.85 → 0.7 → 0.6) and halves shadow resolution if the
   smoothed frame rate stays below 55 fps. It only steps down, so a transient load spike can
   cost some sharpness until reload; `?fixed=1` disables it for benchmarking.
-- FPV camera sits at the body centre with a configurable tilt (24° default, 0–60°) and a
-  speed-dependent FOV widening. The chase camera is spring-damped. An overview camera is
-  available for debugging and screenshots.
+- FPV camera sits in the pod, above the prop plane, with a configurable tilt (24° default,
+  0-60°) and a speed-dependent FOV widening. In FPV the airframe is hidden from the colour
+  pass with `colorWrite = false` but left in the shadow pass, so the quad still casts a
+  shadow without the frame filling the view. The front props are redrawn with a dark
+  translucent material so they read as blur at the frame corners. The chase camera is
+  spring-damped. An overview camera is available for debugging and screenshots.
 - The sim ships two worlds that are both built at startup and switched instantly from the
   start menu: an outdoor airfield plus skate park, and an indoor start-to-finish course.
   The outdoor world is a 100 m × 400 m asphalt strip with a warehouse, containers, tyre

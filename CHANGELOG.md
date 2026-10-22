@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- FPV view now keeps the airframe in the shadow pass, so the quad casts a shadow while you
+  fly it instead of disappearing from the scene completely.
+- Front props sweep through the bottom corners of the FPV view as dark blur, the way a real
+  camera sees them, and the lens sits above the prop plane.
+- Prop blur discs no longer cast hard circular shadows, and props stop turning when the quad
+  is disarmed or crashed.
+
 ## 0.2.0 — desktop package
 
 - Added a native Windows launcher that starts the bundled server, picks a free loopback
