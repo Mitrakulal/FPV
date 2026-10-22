@@ -1,6 +1,6 @@
 {
   "name": "fpv-rig",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Offline FPV simulator: laptop physics and rendering, Android phone as a real transmitter over USB",
@@ -20,7 +20,10 @@
     "watch": "node scripts/build.mjs --watch",
     "test": "node --test tests/physics.test.ts tests/protocol.test.ts",
     "smoke": "node tools/smoke.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "launcher:build": "node scripts/build-launcher.mjs",
+    "launcher": "npm run build && node scripts/build-launcher.mjs && node scripts/run-launcher.mjs",
+    "package:win": "node scripts/package-win.mjs"
   },
   "dependencies": {
     "three": "^0.186.1",
