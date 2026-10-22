@@ -10,6 +10,10 @@ const releaseRoot = path.join(root, 'dist', 'release');
 const appName = `FPV-Rig-${version}`;
 const appDir = path.join(releaseRoot, appName);
 const zipPath = path.join(releaseRoot, `${appName}-portable.zip`);
+const payloadDir = path.join(releaseRoot, 'payload');
+const payloadZip = path.join(releaseRoot, 'payload.zip');
+const setupPath = path.join(releaseRoot, `${appName}-Setup.exe`);
+const manifest = path.join(root, 'apps', 'launcher', 'app.manifest');
 
 function run(command, args, options = {}) {
   execFileSync(command, args, { cwd: root, stdio: 'inherit', ...options });
@@ -28,6 +32,43 @@ function copyFile(source, destination) {
 function write(destination, text) {
   fs.mkdirSync(path.dirname(destination), { recursive: true });
   fs.writeFileSync(destination, text, 'utf8');
+}
+
+function findCsc() {
+  const windir = process.env.WINDIR ?? 'C:\\Windows';
+  const candidates = [
+    path.join(windir, 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe'),
+    path.join(windir, 'Microsoft.NET', 'Framework', 'v4.0.30319', 'csc.exe'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  throw new Error('csc.exe not found. This build needs the .NET Framework 4.x compiler included with Windows.');
+}
+
+const csc = findCsc();
+const common = path.join(root, 'packaging', 'installer', 'Common.cs');
+
+function compileCSharp(source, output, extraArgs = []) {
+  const args = [
+    '/nologo',
+    '/target:winexe',
+    '/platform:anycpu',
+    '/optimize+',
+    '/warn:4',
+    '/out:' + output,
+    '/win32manifest:' + manifest,
+    '/reference:System.dll',
+    '/reference:System.Core.dll',
+    '/reference:System.Drawing.dll',
+    '/reference:System.Windows.Forms.dll',
+    '/reference:System.IO.Compression.dll',
+    '/reference:System.IO.Compression.FileSystem.dll',
+    ...extraArgs,
+    common,
+    ...source,
+  ];
+  run(csc, args);
 }
 
 console.log(`[package] ${appName}`);
@@ -52,7 +93,7 @@ for (const name of ['adb.exe', 'AdbWinApi.dll', 'AdbWinUsbApi.dll', 'NOTICE.txt'
 }
 
 copyFile(path.join(root, 'LICENSE'), path.join(appDir, 'LICENSE'));
-fs.writeFileSync(path.join(appDir, 'portable.txt'), 'Portable build: settings and logs live in the data folder next to FPV.exe.\n');
+write(path.join(appDir, 'portable.txt'), 'Portable build: settings and logs live in the data folder next to FPV.exe.\n');
 write(path.join(appDir, 'VERSION.txt'), `${pkg.name} ${version}\nBuilt ${new Date().toISOString()}\n`);
 write(path.join(appDir, 'START-HERE.txt'), [
   'FPV RIG - portable build',
@@ -75,7 +116,6 @@ write(path.join(appDir, 'START-HERE.txt'), [
   '',
   'If Windows SmartScreen appears, this build is unsigned. Choose More info -> Run anyway.',
 ].join('\r\n') + '\r\n');
-
 write(path.join(appDir, 'THIRD-PARTY.md'), [
   '# Third-party components',
   '',
@@ -95,6 +135,39 @@ run('powershell.exe', [
   `Compress-Archive -LiteralPath '${appDir.replace(/'/g, "''")}' -DestinationPath '${zipPath.replace(/'/g, "''")}' -CompressionLevel Optimal`,
 ]);
 
+console.log('[package] building installer payload...');
+copy(appDir, payloadDir);
+fs.rmSync(path.join(payloadDir, 'portable.txt'), { force: true });
+write(path.join(payloadDir, 'START-HERE.txt'), [
+  'FPV RIG',
+  '',
+  'This copy is installed for the current Windows user.',
+  'Launch it from the Start menu or the desktop shortcut.',
+  '',
+  'Settings and logs live in %LOCALAPPDATA%\\FPV.',
+  'Everything runs on this PC. The server binds to 127.0.0.1 only.',
+  '',
+  'If Windows SmartScreen appears, this build is unsigned. Choose More info -> Run anyway.',
+].join('\r\n') + '\r\n');
+
+compileCSharp([path.join(root, 'packaging', 'installer', 'Uninstaller.cs')], path.join(payloadDir, 'Uninstall.exe'));
+
+if (fs.existsSync(payloadZip)) fs.rmSync(payloadZip, { force: true });
+run('powershell.exe', [
+  '-NoProfile',
+  '-NonInteractive',
+  '-Command',
+  `Compress-Archive -Path '${path.join(payloadDir, '*').replace(/'/g, "''")}' -DestinationPath '${payloadZip.replace(/'/g, "''")}' -CompressionLevel Optimal`,
+]);
+
+console.log('[package] embedding payload and building setup...');
+compileCSharp([path.join(root, 'packaging', 'installer', 'Installer.cs')], setupPath, ['/resource:' + payloadZip + ',payload.zip']);
+
+fs.rmSync(payloadDir, { recursive: true, force: true });
+fs.rmSync(payloadZip, { force: true });
+
 const zipMb = (fs.statSync(zipPath).size / 1024 / 1024).toFixed(1);
+const setupMb = (fs.statSync(setupPath).size / 1024 / 1024).toFixed(1);
 console.log(`[package] ${path.relative(root, appDir)}`);
 console.log(`[package] ${path.relative(root, zipPath)} (${zipMb} MB)`);
+console.log(`[package] ${path.relative(root, setupPath)} (${setupMb} MB)`);
