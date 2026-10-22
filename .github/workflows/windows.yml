@@ -49,6 +49,12 @@ jobs:
           name: fpv-rig-setup
           path: dist/release/*-Setup.exe
 
+      - name: Upload checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: fpv-rig-checksums
+          path: dist/release/SHA256SUMS.txt
+
       - name: Upload release notes
         uses: actions/upload-artifact@v4
         with:

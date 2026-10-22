@@ -125,6 +125,7 @@ It produces:
 dist/release/FPV-Rig-0.2.0/
 dist/release/FPV-Rig-0.2.0-portable.zip
 dist/release/FPV-Rig-0.2.0-Setup.exe
+dist/release/SHA256SUMS.txt
 ```
 
 The staged folder is the same layout used by both packages. The installer embeds a ZIP
@@ -148,6 +149,7 @@ development layout uses the Node runtime already on `PATH`.
 - [ ] Install from the Setup exe on a clean Windows account
 - [ ] Connect a physical Android phone, accept the RSA prompt, fly a run
 - [ ] Uninstall and confirm the folder, shortcuts and registry entry are gone
+- [ ] Verify both artifacts against `SHA256SUMS.txt`
 - [ ] Scan both artifacts with the organisation's antivirus
 - [ ] Sign the Setup exe and `FPV.exe` if a code-signing certificate is available
 - [ ] Upload the Setup exe and portable ZIP to the GitHub release

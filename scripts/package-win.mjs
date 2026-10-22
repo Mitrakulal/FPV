@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -33,6 +34,10 @@ function copyFile(source, destination) {
 function write(destination, text) {
   fs.mkdirSync(path.dirname(destination), { recursive: true });
   fs.writeFileSync(destination, text, 'utf8');
+}
+
+function sha256(file) {
+  return createHash('sha256').update(fs.readFileSync(file)).digest('hex').toUpperCase();
 }
 
 function findCsc() {
@@ -170,8 +175,16 @@ compileCSharp([path.join(root, 'packaging', 'installer', 'Installer.cs')], setup
 fs.rmSync(payloadDir, { recursive: true, force: true });
 fs.rmSync(payloadZip, { force: true });
 
+const sumsPath = path.join(releaseRoot, 'SHA256SUMS.txt');
+write(sumsPath, [
+  `${sha256(setupPath)}  ${path.basename(setupPath)}`,
+  `${sha256(zipPath)}  ${path.basename(zipPath)}`,
+  '',
+].join('\n'));
+
 const zipMb = (fs.statSync(zipPath).size / 1024 / 1024).toFixed(1);
 const setupMb = (fs.statSync(setupPath).size / 1024 / 1024).toFixed(1);
 console.log(`[package] ${path.relative(root, appDir)}`);
 console.log(`[package] ${path.relative(root, zipPath)} (${zipMb} MB)`);
 console.log(`[package] ${path.relative(root, setupPath)} (${setupMb} MB)`);
+console.log(`[package] ${path.relative(root, sumsPath)}`);
