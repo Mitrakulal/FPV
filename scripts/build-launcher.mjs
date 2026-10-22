@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = path.join(root, 'apps', 'launcher', 'FPVLauncher.cs');
 const manifest = path.join(root, 'apps', 'launcher', 'app.manifest');
+const icon = path.join(root, 'apps', 'launcher', 'fpv.ico');
 const outDir = path.join(root, 'dist', 'launcher');
 const outFile = path.join(outDir, 'FPV.exe');
 
@@ -36,6 +37,7 @@ const args = [
   '/warn:4',
   '/out:' + outFile,
   '/win32manifest:' + manifest,
+  '/win32icon:' + icon,
   '/reference:System.dll',
   '/reference:System.Core.dll',
   '/reference:System.Drawing.dll',

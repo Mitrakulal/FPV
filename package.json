@@ -23,6 +23,7 @@
     "typecheck": "tsc --noEmit",
     "launcher:build": "node scripts/build-launcher.mjs",
     "launcher": "npm run build && node scripts/build-launcher.mjs && node scripts/run-launcher.mjs",
+    "fetch:adb": "node scripts/fetch-adb.mjs",
     "package:win": "node scripts/package-win.mjs"
   },
   "dependencies": {

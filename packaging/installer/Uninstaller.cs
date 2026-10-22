@@ -1,7 +1,15 @@
 using System;
 using System.Drawing;
 using System.IO;
+using System.Reflection;
 using System.Windows.Forms;
+
+[assembly: AssemblyTitle("FPV Rig Uninstall")]
+[assembly: AssemblyDescription("FPV Rig uninstaller")]
+[assembly: AssemblyProduct("FPV Rig")]
+[assembly: AssemblyCompany("Mitrakulal")]
+[assembly: AssemblyVersion("0.2.0.0")]
+[assembly: AssemblyFileVersion("0.2.0.0")]
 
 namespace FpvSetup
 {
@@ -25,7 +33,17 @@ namespace FpvSetup
             MinimizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
             AutoScaleMode = AutoScaleMode.Dpi;
-            Icon = SystemIcons.Application;
+            try
+            {
+                Icon appIcon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+                if (appIcon != null)
+                {
+                    Icon = appIcon;
+                }
+            }
+            catch
+            {
+            }
 
             Label title = new Label();
             title.Text = "Uninstall FPV Rig";

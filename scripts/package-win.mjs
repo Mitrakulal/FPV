@@ -14,6 +14,7 @@ const payloadDir = path.join(releaseRoot, 'payload');
 const payloadZip = path.join(releaseRoot, 'payload.zip');
 const setupPath = path.join(releaseRoot, `${appName}-Setup.exe`);
 const manifest = path.join(root, 'apps', 'launcher', 'app.manifest');
+const icon = path.join(root, 'apps', 'launcher', 'fpv.ico');
 
 function run(command, args, options = {}) {
   execFileSync(command, args, { cwd: root, stdio: 'inherit', ...options });
@@ -58,6 +59,7 @@ function compileCSharp(source, output, extraArgs = []) {
     '/warn:4',
     '/out:' + output,
     '/win32manifest:' + manifest,
+    '/win32icon:' + icon,
     '/reference:System.dll',
     '/reference:System.Core.dll',
     '/reference:System.Drawing.dll',
@@ -75,6 +77,7 @@ console.log(`[package] ${appName}`);
 
 run(process.execPath, ['scripts/build.mjs']);
 run(process.execPath, ['scripts/build-launcher.mjs']);
+run(process.execPath, ['scripts/fetch-adb.mjs']);
 
 fs.rmSync(releaseRoot, { recursive: true, force: true });
 fs.mkdirSync(appDir, { recursive: true });

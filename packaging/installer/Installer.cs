@@ -2,8 +2,16 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+
+[assembly: AssemblyTitle("FPV Rig Setup")]
+[assembly: AssemblyDescription("FPV Rig installer")]
+[assembly: AssemblyProduct("FPV Rig")]
+[assembly: AssemblyCompany("Mitrakulal")]
+[assembly: AssemblyVersion("0.2.0.0")]
+[assembly: AssemblyFileVersion("0.2.0.0")]
 
 namespace FpvSetup
 {
@@ -29,7 +37,17 @@ namespace FpvSetup
             MinimizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
             AutoScaleMode = AutoScaleMode.Dpi;
-            Icon = SystemIcons.Application;
+            try
+            {
+                Icon appIcon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+                if (appIcon != null)
+                {
+                    Icon = appIcon;
+                }
+            }
+            catch
+            {
+            }
 
             Label title = new Label();
             title.Text = "FPV RIG SETUP";
@@ -78,10 +96,17 @@ namespace FpvSetup
             info.Controls.Add(folder);
 
             Label settings = new Label();
-            settings.Text = "Settings and logs go to " + InstallInfo.DataDir + ". Everything is local.";
+            settings.Text = "Settings and logs: " + InstallInfo.DataDir;
             settings.ForeColor = Color.FromArgb(120, 138, 156);
-            settings.SetBounds(16, 86, 532, 20);
+            settings.AutoEllipsis = true;
+            settings.SetBounds(16, 82, 532, 20);
             info.Controls.Add(settings);
+
+            Label local = new Label();
+            local.Text = "Everything stays local. No account, no internet.";
+            local.ForeColor = Color.FromArgb(120, 138, 156);
+            local.SetBounds(16, 102, 532, 20);
+            info.Controls.Add(local);
 
             desktopShortcut = new CheckBox();
             desktopShortcut.Text = "Create a desktop shortcut";

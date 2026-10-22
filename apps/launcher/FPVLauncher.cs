@@ -5,11 +5,22 @@ using System.Drawing;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Win32;
+
+[assembly: AssemblyTitle("FPV Rig Launcher")]
+[assembly: AssemblyDescription("Offline FPV simulator launcher")]
+[assembly: AssemblyProduct("FPV Rig")]
+[assembly: AssemblyCompany("Mitrakulal")]
+[assembly: AssemblyCopyright("Copyright (c) 2026 Mitrakulal")]
+[assembly: AssemblyVersion("0.2.0.0")]
+[assembly: AssemblyFileVersion("0.2.0.0")]
+[assembly: AssemblyInformationalVersion("0.2.0")]
 
 namespace FpvRig
 {
@@ -18,6 +29,25 @@ namespace FpvRig
         public const string Product = "FPV Rig";
         public const string Version = "0.2.0";
         public const string Tagline = "Offline FPV simulator. Your phone is the transmitter.";
+    }
+
+    internal static class AppIcon
+    {
+        public static Icon Load()
+        {
+            try
+            {
+                Icon icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+                if (icon != null)
+                {
+                    return icon;
+                }
+            }
+            catch
+            {
+            }
+            return SystemIcons.Application;
+        }
     }
 
     internal static class Paths
@@ -129,6 +159,15 @@ namespace FpvRig
         {
             try
             {
+                if (File.Exists(Paths.ServerLog))
+                {
+                    string previous = Paths.ServerLog + ".previous";
+                    if (File.Exists(previous))
+                    {
+                        File.Delete(previous);
+                    }
+                    File.Move(Paths.ServerLog, previous);
+                }
                 string stamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 File.AppendAllText(Paths.LauncherLog, "\r\n=== " + AppInfo.Product + " " + AppInfo.Version + "  " + stamp + " ===\r\n");
             }
@@ -1142,6 +1181,7 @@ namespace FpvRig
             MinimizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
             ShowInTaskbar = false;
+            Icon = AppIcon.Load();
 
             Label title = new Label();
             title.Text = firstRun ? "Set up your phone" : "Phone setup";
@@ -1294,6 +1334,11 @@ namespace FpvRig
 
     internal sealed class LauncherForm : Form
     {
+        private const int EM_LINESCROLL = 0xB6;
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
         private readonly ServerManager server = new ServerManager();
         private readonly PhoneMonitor phone = new PhoneMonitor();
         private readonly System.Windows.Forms.Timer uiTimer = new System.Windows.Forms.Timer();
@@ -1331,7 +1376,7 @@ namespace FpvRig
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
             AutoScaleMode = AutoScaleMode.Dpi;
-            Icon = SystemIcons.Application;
+            Icon = AppIcon.Load();
 
             Label title = new Label();
             title.Text = "FPV RIG";
@@ -1419,7 +1464,7 @@ namespace FpvRig
             activity = new TextBox();
             activity.Multiline = true;
             activity.ReadOnly = true;
-            activity.ScrollBars = ScrollBars.Vertical;
+            activity.ScrollBars = ScrollBars.Both;
             activity.WordWrap = false;
             activity.BorderStyle = BorderStyle.FixedSingle;
             activity.BackColor = Color.FromArgb(6, 8, 11);
@@ -1430,7 +1475,7 @@ namespace FpvRig
             Controls.Add(activity);
 
             Label footer = new Label();
-            footer.Text = "Runs locally. Nothing is uploaded. Audio starts after your first click.";
+            footer.Text = "Runs locally. No accounts. No internet.";
             footer.ForeColor = Color.FromArgb(95, 112, 130);
             footer.SetBounds(26, 534, 470, 20);
             Controls.Add(footer);
@@ -1448,7 +1493,7 @@ namespace FpvRig
             server.Changed += delegate { SafeUi(); };
             phone.Changed += delegate { SafeUi(); };
 
-            tray.Icon = SystemIcons.Application;
+            tray.Icon = AppIcon.Load();
             tray.Text = AppInfo.Product;
             tray.Visible = true;
             tray.DoubleClick += delegate { RestoreWindow(); };
@@ -1494,6 +1539,7 @@ namespace FpvRig
                 uiTimer.Stop();
                 phoneTimer.Stop();
                 tray.Visible = false;
+                tray.Dispose();
                 server.Dispose();
             };
             Resize += delegate
@@ -1727,8 +1773,10 @@ namespace FpvRig
             {
                 lastActivity = tail;
                 activity.Text = tail;
-                activity.SelectionStart = activity.TextLength;
-                activity.ScrollToCaret();
+                if (activity.IsHandleCreated)
+                {
+                    SendMessage(activity.Handle, EM_LINESCROLL, IntPtr.Zero, (IntPtr)activity.Lines.Length);
+                }
             }
 
             if (running && pendingOpen && !autoOpenDone)
