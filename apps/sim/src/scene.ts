@@ -3,7 +3,7 @@ import type { Assets, TexSet } from './assets';
 import { buildQuad } from './quad';
 import type { Collider, Platform, Ramp } from './physics';
 import { buildPark } from './park';
-import { buildGhostWorks } from './industry';
+import { buildIndustry } from './industry';
 import type { World } from './world';
 import {
   bannerTexture,
@@ -996,7 +996,7 @@ export async function buildWorld(renderer: THREE.WebGLRenderer, assets: Assets):
   });
 
   // ---------------------------------------------------------------- ghost works
-  const works = await buildGhostWorks(scene, assets, colliders);
+  const works = await buildIndustry(scene, assets, colliders);
   platforms.push(...works.platforms);
 
   // ---------------------------------------------------------------- park
