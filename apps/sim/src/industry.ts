@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { Assets, TexSet } from './assets';
 import type { Collider, Platform } from './physics';
+import { graffitiTexture } from './textures';
 
 /**
  * Ghost Works: the abandoned industrial district north of the training gates.
@@ -800,6 +801,192 @@ function southField(
   });
 }
 
+/** Fenced annex behind the skate park: workshop, conveyor bridge, yard junk. */
+function annex(
+  b: Batcher,
+  m: Mats,
+  scene: THREE.Scene,
+  colliders: Collider[],
+  platforms: Platform[],
+): void {
+  const wallH = 2.8;
+  const t = 0.4;
+
+  // dirt
+  apron(b, m.gravel, 112, -118, 34, 27, 0.02);
+  apron(b, m.gravel, 96, -102, 16, 12, 0.03);
+
+  // compound wall with a gate facing the park
+  const runs: Array<[number, number, number, number]> = [
+    [95, -92, 22, t],
+    [131, -92, 30, t],
+    [84, -115, t, 46],
+    [146, -115, t, 46],
+    [115, -138, 62, t],
+  ];
+  for (const [x, z, w, d] of runs) {
+    b.add(m.wall, new THREE.BoxGeometry(w, wallH, d), place(x, wallH / 2, z), [
+      Math.max(w, d) * 0.16,
+      0.45,
+    ]);
+    colliders.push({
+      min: { x: x - w / 2, y: 0, z: z - d / 2 },
+      max: { x: x + w / 2, y: wallH, z: z + d / 2 },
+    });
+  }
+  for (const gx of [106, 116]) {
+    b.add(m.wall, new THREE.BoxGeometry(0.7, 3.6, 0.7), place(gx, 1.8, -92), [0.3, 0.6]);
+    colliders.push({
+      min: { x: gx - 0.35, y: 0, z: -92.35 },
+      max: { x: gx + 0.35, y: 3.6, z: -91.65 },
+    });
+  }
+
+  // main shed
+  shed(b, colliders, platforms, {
+    x: 102,
+    z: -116,
+    w: 28,
+    d: 22,
+    h: 7.6,
+    wallMat: m.wall,
+    roofMat: m.roof,
+    postMat: m.steel,
+    glassMat: m.glass,
+    door: 8,
+  });
+
+  // workshop with a flat roof you can land on
+  const wx = 132;
+  const wz = -110;
+  const ww = 14;
+  const wd = 12;
+  const wh = 5.2;
+  for (const [x, z, w, d] of [
+    [wx, wz - wd / 2, ww, t],
+    [wx, wz + wd / 2, ww, t],
+    [wx + ww / 2, wz, t, wd],
+  ] as const) {
+    b.add(m.wall, new THREE.BoxGeometry(w, wh, d), place(x, wh / 2, z), [
+      Math.max(w, d) * 0.16,
+      wh * 0.16,
+    ]);
+    colliders.push({
+      min: { x: x - w / 2, y: 0, z: z - d / 2 },
+      max: { x: x + w / 2, y: wh, z: z + d / 2 },
+    });
+  }
+  // west wall split by a roll-up door
+  for (const [z, d] of [
+    [wz - 4.5, 3],
+    [wz + 4.5, 3],
+  ] as const) {
+    b.add(m.wall, new THREE.BoxGeometry(t, wh, d), place(wx - ww / 2, wh / 2, z), [0.5, 0.9]);
+    colliders.push({
+      min: { x: wx - ww / 2 - t / 2, y: 0, z: z - d / 2 },
+      max: { x: wx - ww / 2 + t / 2, y: wh, z: z + d / 2 },
+    });
+  }
+  b.add(m.wall, new THREE.BoxGeometry(t, wh - 4.2, 6), place(wx - ww / 2, 4.2 + (wh - 4.2) / 2, wz), [0.5, 0.3]);
+  b.add(m.roof, new THREE.BoxGeometry(ww + 0.9, 0.3, wd + 0.9), place(wx, wh + 0.15, wz), [3, 3]);
+  for (let i = 0; i < 4; i++) {
+    const px = wx - ww / 2 + 1.4 + i * 3.6;
+    b.add(m.wall, new THREE.BoxGeometry(0.4, 0.55, wd + 0.9), place(px, wh + 0.45, wz), [0.5, 0.4]);
+  }
+  // roof vents
+  for (const vx of [wx - 3, wx + 3.4]) {
+    b.add(m.steel, new THREE.CylinderGeometry(0.55, 0.55, 0.9, 12), place(vx, wh + 0.75, wz + 1.5));
+    b.add(m.steel, new THREE.ConeGeometry(0.7, 0.35, 12), place(vx, wh + 1.35, wz + 1.5));
+  }
+  colliders.push({
+    min: { x: wx - ww / 2, y: wh, z: wz - wd / 2 },
+    max: { x: wx + ww / 2, y: wh + 0.4, z: wz + wd / 2 },
+  });
+  platforms.push({
+    minX: wx - ww / 2,
+    maxX: wx + ww / 2,
+    minZ: wz - wd / 2,
+    maxZ: wz + wd / 2,
+    top: wh + 0.31,
+  });
+
+  // conveyor from the shed to the workshop, with legs
+  const c0 = 116;
+  const c1 = 125;
+  b.add(m.rust, new THREE.BoxGeometry(c1 - c0, 0.5, 1.7), place((c0 + c1) / 2, 5.6, wz + 1), [4, 1]);
+  for (const sz of [-0.9, 0.9]) {
+    b.add(m.steel, new THREE.BoxGeometry(c1 - c0, 0.7, 0.08), place((c0 + c1) / 2, 6.2, wz + 1 + sz));
+  }
+  for (const lx of [c1 - 0.8]) {
+    for (const sz of [-0.9, 0.9]) {
+      b.add(m.steel, new THREE.BoxGeometry(0.16, 5.6, 0.16), place(lx, 2.8, wz + 1 + sz));
+    }
+  }
+  colliders.push({
+    min: { x: c0, y: 5.3, z: wz + 0.1 },
+    max: { x: c1, y: 6.6, z: wz + 1.9 },
+  });
+
+  // skip, pallets, drums
+  b.add(m.rust, new THREE.BoxGeometry(4.2, 1.5, 2.1), place(93, 0.78, -132), [3, 1]);
+  b.add(m.rust, new THREE.BoxGeometry(4.4, 0.14, 2.3), place(93, 1.6, -132.6, 0, -0.12), [3, 1]);
+  colliders.push({
+    min: { x: 90.9, y: 0, z: -133.1 },
+    max: { x: 95.1, y: 1.7, z: -130.9 },
+  });
+  const ar = seeded(402);
+  for (let i = 0; i < 6; i++) {
+    const px = 118 + ar() * 8;
+    const pz = -126 - ar() * 8;
+    for (let k = 0; k < 4; k++) {
+      b.add(m.rust, new THREE.BoxGeometry(1.3, 0.14, 1.0), place(px, 0.09 + k * 0.15, pz, ar() * 0.4), [1, 0.5]);
+    }
+    colliders.push({
+      min: { x: px - 0.65, y: 0, z: pz - 0.5 },
+      max: { x: px + 0.65, y: 0.62, z: pz + 0.5 },
+    });
+  }
+  for (let i = 0; i < 5; i++) {
+    const dx = 87 + ar() * 9;
+    const dz = -98 - ar() * 10;
+    b.add(m.rust, new THREE.CylinderGeometry(0.3, 0.3, 0.95, 12), place(dx, 0.48, dz), [2, 1]);
+    colliders.push({
+      min: { x: dx - 0.3, y: 0, z: dz - 0.3 },
+      max: { x: dx + 0.3, y: 0.95, z: dz + 0.3 },
+    });
+  }
+
+  // graffiti tags on the yard wall and the shed's west face
+  const tags: Array<[number, number, number, number]> = [
+    [126, 1.9, -92.25, Math.PI],
+    [87.9, 3.1, -112, -Math.PI / 2],
+  ];
+  tags.forEach(([x, y, z, ry], i) => {
+    const tag = new THREE.Mesh(
+      new THREE.PlaneGeometry(6, 2.5),
+      new THREE.MeshStandardMaterial({
+        map: graffitiTexture(31 + i),
+        transparent: true,
+        roughness: 0.95,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
+    );
+    tag.position.set(x, y, z);
+    tag.rotation.y = ry;
+    scene.add(tag);
+  });
+
+  // yard light
+  b.add(m.steel, new THREE.CylinderGeometry(0.1, 0.14, 8, 8), place(110, 4, -134));
+  b.add(m.steel, new THREE.BoxGeometry(1.6, 0.1, 0.1), place(110.7, 8, -134));
+  b.add(m.lamp, new THREE.BoxGeometry(1.0, 0.12, 0.32), place(111.4, 7.92, -134));
+  colliders.push({
+    min: { x: 109.8, y: 0, z: -134.2 },
+    max: { x: 110.2, y: 8, z: -133.8 },
+  });
+}
+
 export async function buildIndustry(
   scene: THREE.Scene,
   assets: Assets,
@@ -844,6 +1031,9 @@ export async function buildIndustry(
   b.commit(scene);
 
   southField(b, m, colliders, platforms);
+  b.commit(scene);
+
+  annex(b, m, scene, colliders, platforms);
   b.commit(scene);
 
   return { platforms };
