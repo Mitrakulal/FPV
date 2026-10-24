@@ -283,12 +283,13 @@ no gates and no timer.
 
 Past the last gate the strip turns industrial. **Ghost Works** on the west half is two
 abandoned sawtooth-roof sheds you can fly through end to end, a chimney, silos, a pipe gantry
-between the roofs and a gravel yard of crates and drums. On the east half a cargo yard stacks
-containers you can land on, three bunded fuel tanks, a water tower and a pump house. Behind
-the start line sit a gabled hangar with a wrecked light aircraft and a glazed control tower;
-south of the skate park a walled annex adds a second shed, a flat workshop roof and a conveyor
-bridge. Every structure is solid, and the new yards are laid out as a slalom — sheds, gantries
-and containers to thread — rather than as a backdrop.
+between the roofs and a gravel yard of crates and drums. On the east half a downed airliner
+lies across the apron, next to a cargo yard that stacks containers you can land on, three
+bunded fuel tanks, a water tower and a pump house. Behind the start line sit a gabled hangar
+with a wrecked light aircraft and a glazed control tower; south of the skate park a walled
+annex adds a second shed, a flat workshop roof and a conveyor bridge. Every structure is
+solid, and the new yards are laid out as a slalom — sheds, gantries and containers to thread —
+rather than as a backdrop.
 
 ![Airfield overview](docs/media/airfield.png)
 

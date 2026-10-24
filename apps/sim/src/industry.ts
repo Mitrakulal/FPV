@@ -1030,6 +1030,67 @@ function annex(
   });
 }
 
+/** Airliner that came down just past the last gate: big, solid, fly-around. */
+function airlinerWreck(b: Batcher, m: Mats, colliders: Collider[]): void {
+  const cx = 30;
+  const cz = -84;
+
+  // fuselage, nose and tail cone
+  b.add(m.wall, new THREE.CylinderGeometry(1.9, 1.9, 30, 20), place(cx, 1.9, cz, 0, Math.PI / 2), [16, 5]);
+  b.add(m.wall, new THREE.ConeGeometry(1.9, 4.6, 20), place(cx, 1.9, cz - 17.3, 0, -Math.PI / 2), [6, 2]);
+  b.add(m.wall, new THREE.ConeGeometry(1.9, 4.2, 20), place(cx, 1.9, cz + 17.1, 0, Math.PI / 2), [6, 2]);
+
+  // swept wing halves, winglets and engines
+  for (const sx of [-1, 1]) {
+    b.add(
+      m.wall,
+      new THREE.BoxGeometry(13, 0.28, 3),
+      place(cx + sx * 5.7, 1.62, cz + 1.2, -sx * 0.1),
+      [7, 2],
+    );
+    b.add(m.wall, new THREE.BoxGeometry(0.24, 1.1, 1.6), place(cx + sx * 11.9, 2.1, cz + 2.4, -sx * 0.1), [1, 1]);
+    b.add(m.rust, new THREE.CylinderGeometry(0.8, 0.85, 3.4, 14), place(cx + sx * 7, 1.0, cz - 2.4, 0, Math.PI / 2), [4, 1]);
+    b.add(m.rust, new THREE.CylinderGeometry(0.55, 0.55, 0.5, 12), place(cx + sx * 7, 1.0, cz - 4.2, 0, Math.PI / 2));
+  }
+
+  // tail fin and stabilisers
+  b.add(m.wall, new THREE.BoxGeometry(0.3, 5, 3.2), place(cx, 6.1, cz + 12.2), [2, 2]);
+  b.add(m.wall, new THREE.BoxGeometry(8, 0.26, 1.5), place(cx, 4.4, cz + 12.8), [4, 1]);
+
+  // cabin window strips
+  for (const sx of [-1, 1]) {
+    b.add(m.glass, new THREE.BoxGeometry(0.12, 0.48, 18), place(cx + sx * 1.8, 2.5, cz + 1));
+  }
+
+  // one wing torn off and lying on the apron
+  b.add(m.wall, new THREE.BoxGeometry(10.5, 0.3, 3), place(11, 0.22, -70, 0.5, 0, 0.06), [6, 2]);
+  b.add(m.rust, new THREE.CylinderGeometry(0.82, 0.86, 3.2, 12), place(9.4, 0.75, -67.2, 0.5, Math.PI / 2), [3, 1]);
+  b.add(m.rust, new THREE.CylinderGeometry(0.82, 0.86, 3.2, 12), place(12.8, 0.75, -68.9, 0.5, Math.PI / 2), [3, 1]);
+
+  // debris
+  const rr = seeded(88);
+  for (let i = 0; i < 10; i++) {
+    const dx = 16 + rr() * 22;
+    const dz = -72 - rr() * 18;
+    const s = 0.35 + rr() * 0.9;
+    b.add(m.rust, new THREE.BoxGeometry(s, 0.12, s * 0.7), place(dx, 0.08, dz, rr() * 3, rr() * 0.4), [1, 1]);
+  }
+
+  // colliders: fuselage, wings, detached wing
+  colliders.push({
+    min: { x: cx - 1.9, y: 0, z: cz - 19.4 },
+    max: { x: cx + 1.9, y: 3.8, z: cz + 19.2 },
+  });
+  colliders.push({
+    min: { x: cx - 12.6, y: 1.4, z: cz - 1.2 },
+    max: { x: cx + 12.6, y: 1.8, z: cz + 3.4 },
+  });
+  colliders.push({
+    min: { x: 6.5, y: 0, z: -73.5 },
+    max: { x: 15.5, y: 1.2, z: -66.5 },
+  });
+}
+
 export async function buildIndustry(
   scene: THREE.Scene,
   assets: Assets,
@@ -1073,6 +1134,9 @@ export async function buildIndustry(
   ghostWorks(b, m, scene, colliders, platforms);
   cargoYard(b, m, scene, colliders, platforms);
   // Commit per district so each keeps its own bounding box and culls.
+  b.commit(scene);
+
+  airlinerWreck(b, m, colliders);
   b.commit(scene);
 
   southField(b, m, colliders, platforms);
