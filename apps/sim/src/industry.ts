@@ -601,6 +601,205 @@ function cargoYard(
   });
 }
 
+/** Gabled hangar with a wrecked light aircraft inside, plus a control tower. */
+function southField(
+  b: Batcher,
+  m: Mats,
+  colliders: Collider[],
+  platforms: Platform[],
+): void {
+  const cx = -46;
+  const cz = 34;
+  const w = 26;
+  const d = 20;
+  const h = 8;
+  const rise = 3.2;
+  const hw = w / 2;
+  const hd = d / 2;
+  const t = 0.45;
+
+  // slab
+  b.add(m.wall, new THREE.BoxGeometry(w - 0.5, 0.14, d - 0.5), place(cx, 0.07, cz), [4, 3]);
+
+  // west, east and south walls
+  for (const [wx, wz, bw, bd] of [
+    [cx - hw, cz, t, d],
+    [cx + hw, cz, t, d],
+    [cx, cz + hd, w, t],
+  ] as const) {
+    b.add(m.wall, new THREE.BoxGeometry(bw, h, bd), place(wx, h / 2, wz), [Math.max(bw, bd) * 0.16, h * 0.16]);
+    colliders.push({
+      min: { x: wx - bw / 2, y: 0, z: wz - bd / 2 },
+      max: { x: wx + bw / 2, y: h, z: wz + bd / 2 },
+    });
+  }
+
+  // gable roof, two slabs
+  const slope = Math.atan2(rise, hd);
+  const slabLen = Math.hypot(hd, rise) + 0.6;
+  for (const sz of [-1, 1]) {
+    b.add(
+      m.roof,
+      new THREE.BoxGeometry(w + 1.2, 0.22, slabLen),
+      place(cx, h + rise / 2, cz + sz * (hd / 2), 0, sz * slope),
+      [6, 3],
+    );
+  }
+  b.add(m.roof, new THREE.BoxGeometry(w + 1.4, 0.3, 0.5), place(cx, h + rise, cz), [6, 1]);
+  // gable infill on the east/west ends, stepped to keep it cheap
+  for (const gx of [cx + hw, cx - hw]) {
+    b.add(m.wall, new THREE.BoxGeometry(t, rise * 0.52, d), place(gx, h + rise * 0.26, cz), [0.5, 3]);
+    b.add(m.wall, new THREE.BoxGeometry(t, rise * 0.52, d * 0.56), place(gx, h + rise * 0.74, cz), [0.5, 2]);
+  }
+
+  // open north face: header beam + rusted sliding door pushed to one side
+  b.add(m.steel, new THREE.BoxGeometry(w, 1.5, 0.45), place(cx, h - 0.75, cz - hd), [4, 0.4]);
+  b.add(m.steel, new THREE.BoxGeometry(0.3, h, 0.4), place(cx - hw + 0.2, h / 2, cz - hd));
+  b.add(m.steel, new THREE.BoxGeometry(0.3, h, 0.4), place(cx + hw - 0.2, h / 2, cz - hd));
+  b.add(m.rust, new THREE.BoxGeometry(8.4, 5.8, 0.2), place(cx + 5.6, 2.95, cz - hd - 0.3), [4, 3]);
+  b.add(m.rust, new THREE.BoxGeometry(8.4, 0.25, 0.3), place(cx + 5.6, 6.0, cz - hd - 0.3), [4, 1]);
+  colliders.push({
+    min: { x: cx + 1.4, y: 0, z: cz - hd - 0.6 },
+    max: { x: cx + 9.8, y: 6.0, z: cz - hd - 0.4 },
+  });
+
+  // interior columns and roof trusses
+  for (let i = 0; i < 3; i++) {
+    const pz = cz - hd + 3.5 + i * ((d - 7) / 2);
+    for (const sx of [-1, 1]) {
+      b.add(m.steel, new THREE.BoxGeometry(0.34, h, 0.34), place(cx + sx * (hw - 0.9), h / 2, pz));
+      colliders.push({
+        min: { x: cx + sx * (hw - 0.9) - 0.2, y: 0, z: pz - 0.2 },
+        max: { x: cx + sx * (hw - 0.9) + 0.2, y: h, z: pz + 0.2 },
+      });
+    }
+    b.add(m.steel, new THREE.BoxGeometry(w - 1.4, 0.2, 0.2), place(cx, h - 0.6, pz));
+  }
+
+  // ---------------------------------------------------------------- wreck
+  const px = cx - 3.5;
+  const pz = cz + 3.5;
+  b.add(m.roof, new THREE.CylinderGeometry(0.85, 0.95, 7, 14), place(px, 1.55, pz, 0, Math.PI / 2), [6, 2]);
+  b.add(m.roof, new THREE.ConeGeometry(0.85, 1.3, 14), place(px, 1.55, pz - 4.1, 0, -Math.PI / 2), [3, 1]);
+  b.add(m.roof, new THREE.BoxGeometry(11, 0.18, 1.7), place(px, 1.85, pz - 0.4), [6, 1]);
+  b.add(m.roof, new THREE.BoxGeometry(0.16, 1.5, 1.1), place(px, 2.5, pz + 3.3), [1, 1]);
+  b.add(m.roof, new THREE.BoxGeometry(3.6, 0.14, 0.9), place(px, 1.9, pz + 3.4), [2, 1]);
+  b.add(m.steel, new THREE.CylinderGeometry(0.09, 0.09, 1.3, 6), place(px, 1.5, pz + 4.6, 0, Math.PI / 2));
+  for (const sx of [-1, 1]) {
+    b.add(m.steel, new THREE.BoxGeometry(0.1, 0.7, 0.1), place(px + sx * 1.6, 0.95, pz - 1.4));
+    b.add(m.steel, new THREE.CylinderGeometry(0.32, 0.32, 0.18, 10), place(px + sx * 1.7, 0.32, pz - 1.4, 0, Math.PI / 2));
+  }
+  colliders.push({
+    min: { x: px - 1.1, y: 0, z: pz - 4.7 },
+    max: { x: px + 1.1, y: 2.6, z: pz + 4.7 },
+  });
+  platforms.push({ minX: px - 5.3, maxX: px + 5.3, minZ: pz - 1.2, maxZ: pz + 0.4, top: 1.95 });
+
+  // ---------------------------------------------------------------- hangar dressing
+  b.add(m.rust, new THREE.BoxGeometry(0.9, 1.0, 6), place(cx - hw + 0.95, 0.5, cz + 2), [3, 1]);
+  b.add(m.rust, new THREE.BoxGeometry(0.5, 0.1, 5.2), place(cx - hw + 0.95, 1.1, cz + 2), [3, 1]);
+  const hr = seeded(57);
+  for (let i = 0; i < 5; i++) {
+    const bx = cx - hw + 3.2 + hr() * 8;
+    const bz = cz + 5.5 + hr() * 5;
+    const bs = 0.7 + hr() * 0.6;
+    b.add(m.rust, new THREE.BoxGeometry(bs, bs * 0.85, bs), place(bx, bs * 0.43, bz, hr() * 1.2), [1, 1]);
+    colliders.push({
+      min: { x: bx - bs / 2, y: 0, z: bz - bs / 2 },
+      max: { x: bx + bs / 2, y: bs * 0.85, z: bz + bs / 2 },
+    });
+  }
+  for (const [dx, dz] of [
+    [cx + hw - 2.2, cz + 6.5],
+    [cx + hw - 3.1, cz + 7.1],
+    [cx + hw - 2.4, cz + 7.6],
+  ] as const) {
+    b.add(m.rust, new THREE.CylinderGeometry(0.3, 0.3, 0.95, 12), place(dx, 0.48, dz), [2, 1]);
+    colliders.push({
+      min: { x: dx - 0.3, y: 0, z: dz - 0.3 },
+      max: { x: dx + 0.3, y: 0.95, z: dz + 0.3 },
+    });
+  }
+  // hanging work lamp
+  b.add(m.steel, new THREE.CylinderGeometry(0.03, 0.03, 2.4, 6), place(cx + 2, 9.6, cz + 1));
+  b.add(m.steel, new THREE.CylinderGeometry(0.34, 0.14, 0.36, 12), place(cx + 2, 8.3, cz + 1));
+  b.add(m.lamp, new THREE.SphereGeometry(0.13, 8, 6), place(cx + 2, 8.14, cz + 1));
+
+  // ---------------------------------------------------------------- tower
+  const tx = 44;
+  const tz = 30;
+  b.add(m.wall, new THREE.BoxGeometry(5, 13, 5), place(tx, 6.5, tz), [1, 4]);
+  b.add(m.glass, new THREE.BoxGeometry(0.1, 1.1, 3.2), place(tx - 2.52, 8.6, tz));
+  b.add(m.steel, new THREE.BoxGeometry(0.12, 2.4, 0.12), place(tx - 2.7, 1.3, tz + 1.4));
+  b.add(m.steel, new THREE.BoxGeometry(0.12, 2.4, 0.12), place(tx - 2.7, 1.3, tz - 1.4));
+  b.add(m.wall, new THREE.BoxGeometry(7, 0.5, 7), place(tx, 13.25, tz), [2, 2]);
+  for (const [ox, oz, bw, bd] of [
+    [0, -3.4, 7, 0.16],
+    [0, 3.4, 7, 0.16],
+    [-3.4, 0, 0.16, 7],
+    [3.4, 0, 0.16, 7],
+  ] as const) {
+    b.add(m.glass, new THREE.BoxGeometry(bw, 2.5, bd), place(tx + ox, 14.85, tz + oz));
+  }
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      b.add(m.steel, new THREE.BoxGeometry(0.2, 2.7, 0.2), place(tx + sx * 3.4, 14.85, tz + sz * 3.4));
+    }
+  }
+  b.add(m.roof, new THREE.BoxGeometry(7.8, 0.32, 7.8), place(tx, 16.3, tz), [2, 2]);
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    b.add(m.steel, new THREE.BoxGeometry(0.07, 0.9, 0.07), place(tx + Math.cos(a) * 3.7, 16.9, tz + Math.sin(a) * 3.7));
+  }
+  b.add(m.steel, new THREE.CylinderGeometry(3.75, 3.75, 0.07, 20), place(tx, 17.3, tz));
+  b.add(m.steel, new THREE.CylinderGeometry(0.09, 0.14, 5, 8), place(tx + 2.2, 19.9, tz), [2, 1]);
+  b.add(m.lamp, new THREE.SphereGeometry(0.16, 8, 6), place(tx + 2.2, 22.5, tz));
+  colliders.push({
+    min: { x: tx - 2.5, y: 0, z: tz - 2.5 },
+    max: { x: tx + 2.5, y: 13.5, z: tz + 2.5 },
+  });
+  colliders.push({
+    min: { x: tx - 3.9, y: 13, z: tz - 3.9 },
+    max: { x: tx + 3.9, y: 17.4, z: tz + 3.9 },
+  });
+
+  // ---------------------------------------------------------------- windsock
+  const sx = 30;
+  const sz = 21;
+  b.add(m.steel, new THREE.CylinderGeometry(0.07, 0.11, 6.5, 8), place(sx, 3.25, sz));
+  for (let i = 0; i < 3; i++) {
+    b.add(m.rust, new THREE.CylinderGeometry(0.32 - i * 0.05, 0.38 - i * 0.05, 0.7, 10, 1, true), place(sx + 0.55 + i * 0.72, 6.3 - i * 0.06, sz, 0, 0, Math.PI / 2), [2, 1]);
+  }
+  colliders.push({
+    min: { x: sx - 0.15, y: 0, z: sz - 0.15 },
+    max: { x: sx + 0.15, y: 6.5, z: sz + 0.15 },
+  });
+
+  // ---------------------------------------------------------------- line clutter
+  const rr = seeded(331);
+  for (let i = 0; i < 5; i++) {
+    const cxx = -18 + i * 3.2;
+    const czz = 6 + rr() * 4;
+    b.add(m.rust, new THREE.ConeGeometry(0.28, 0.75, 10), place(cxx, 0.38, czz), [1, 1]);
+    colliders.push({
+      min: { x: cxx - 0.28, y: 0, z: czz - 0.28 },
+      max: { x: cxx + 0.28, y: 0.75, z: czz + 0.28 },
+    });
+  }
+  // tow tractor, seen better than modelled
+  b.add(m.rust, new THREE.BoxGeometry(2.6, 1.0, 1.5), place(-10, 0.8, 12), [2, 1]);
+  b.add(m.steel, new THREE.BoxGeometry(1.4, 0.9, 1.4), place(-10.6, 1.6, 12), [1, 1]);
+  for (const ox of [-0.9, 0.9]) {
+    for (const oz of [-0.8, 0.8]) {
+      b.add(m.steel, new THREE.CylinderGeometry(0.35, 0.35, 0.24, 10), place(-10 + ox, 0.35, 12 + oz, 0, Math.PI / 2));
+    }
+  }
+  colliders.push({
+    min: { x: -11.3, y: 0, z: 11.2 },
+    max: { x: -8.7, y: 2.1, z: 12.8 },
+  });
+}
+
 export async function buildIndustry(
   scene: THREE.Scene,
   assets: Assets,
@@ -641,8 +840,12 @@ export async function buildIndustry(
 
   ghostWorks(b, m, scene, colliders, platforms);
   cargoYard(b, m, scene, colliders, platforms);
-
+  // Commit per district so each keeps its own bounding box and culls.
   b.commit(scene);
+
+  southField(b, m, colliders, platforms);
+  b.commit(scene);
+
   return { platforms };
 }
 
