@@ -3,6 +3,7 @@ import type { Assets, TexSet } from './assets';
 import { buildQuad } from './quad';
 import type { Collider, Platform, Ramp } from './physics';
 import { buildPark } from './park';
+import { buildGhostWorks } from './industry';
 import type { World } from './world';
 import {
   bannerTexture,
@@ -613,7 +614,7 @@ export async function buildWorld(renderer: THREE.WebGLRenderer, assets: Assets):
     { x: -105, z: -40, r: 48 },
     // Keep the east tree line beyond the skate park so the new plaza is open.
     { x: 195, z: -34, r: 38 },
-    { x: -15, z: -152, r: 58 },
+    { x: -15, z: -215, r: 52 },
     { x: 78, z: 44, r: 36 },
     { x: -112, z: 34, r: 42 },
   ];
@@ -993,6 +994,10 @@ export async function buildWorld(renderer: THREE.WebGLRenderer, assets: Assets):
     min: { x: -27.2, y: 0, z: -3.2 },
     max: { x: -20.8, y: 2.1, z: 0.2 },
   });
+
+  // ---------------------------------------------------------------- ghost works
+  const works = await buildGhostWorks(scene, assets, colliders);
+  platforms.push(...works.platforms);
 
   // ---------------------------------------------------------------- park
   const park = await buildPark(scene, assets, colliders);
