@@ -247,9 +247,18 @@ impact speed. The renderer uses those counters for sound only; they never alter 
 - The sim ships two worlds that are both built at startup and switched instantly from the
   start menu: an outdoor airfield plus skate park, and an indoor start-to-finish course.
   The outdoor world is a 100 m × 400 m asphalt strip with a warehouse, containers, tyre
-  stacks, pallets, barrels, poles, trees, a windsock, five gates and a skate park. The indoor
-  world is a 32 m × 118 m tesseract-clad course with six portals, three ramps, a mezzanine
-  and an end deck. Colliders are simple boxes derived from the props, not triangle meshes.
+  stacks, pallets, barrels, poles, trees, a windsock, five gates and a skate park, plus the
+  industrial belt past the gates — factory shells, silos, a fuel farm, a water tower, a
+  hangar, a control tower and a fenced annex. The indoor world is a 32 m × 118 m
+  tesseract-clad course with six portals, three ramps, a mezzanine and an end deck. Colliders
+  are simple boxes derived from the props, not triangle meshes.
+- The industrial scenery is built through a small batcher in `industry.ts`: parts are
+  transformed, UV-scaled for a constant texel density, then merged into one geometry per
+  material and committed per district. A whole factory costs a handful of draws, and each
+  district keeps its own bounding box so the frustum and shadow pass can still cull it.
+  Containers are a single `InstancedMesh` with per-instance colour. This kept the four new
+  districts at roughly 60 extra draw calls and 25k triangles over the whole map at the time
+  of writing, measured from `renderer.info` with the overview camera.
 
 ## Audio
 

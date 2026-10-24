@@ -8,6 +8,13 @@
   camera sees them, and the lens sits above the prop plane.
 - Prop blur discs no longer cast hard circular shadows, and props stop turning when the quad
   is disarmed or crashed.
+- The airfield now continues past the gates into an industrial belt built by `industry.ts`:
+  two fly-through factory shells with a chimney, silos and a pipe gantry; a cargo yard with
+  landable container stacks, a bunded fuel farm, pump house and water tower; a gabled hangar
+  with a wrecked aircraft, a glazed control tower and a windsock; and a walled annex south of
+  the park with a second shed, a flat workshop roof and a conveyor bridge.
+- Those districts are merged into one geometry per material, so the whole belt costs about
+  60 extra draw calls instead of the hundreds that separate meshes would have added.
 
 ## 0.2.0 — desktop package
 

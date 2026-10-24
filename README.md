@@ -281,7 +281,18 @@ gap in the fence leads to a small skate park: two banks, a funbox with a raised 
 ledges, benches, planters, a graffiti wall and two floating rings. The park is free flight —
 no gates and no timer.
 
+Past the last gate the strip turns industrial. **Ghost Works** on the west half is two
+abandoned sawtooth-roof sheds you can fly through end to end, a chimney, silos, a pipe gantry
+between the roofs and a gravel yard of crates and drums. On the east half a cargo yard stacks
+containers you can land on, three bunded fuel tanks, a water tower and a pump house. Behind
+the start line sit a gabled hangar with a wrecked light aircraft and a glazed control tower;
+south of the skate park a walled annex adds a second shed, a flat workshop roof and a conveyor
+bridge. Every structure is solid, and the new yards are laid out as a slalom — sheds, gantries
+and containers to thread — rather than as a backdrop.
+
 ![Airfield overview](docs/media/airfield.png)
+
+![Ghost Works factory shells at the north end of the strip](docs/media/ghost-works.png)
 
 ### Tesseract course
 
@@ -345,6 +356,7 @@ fpv/
 │  │     ├─ world.ts       shared world descriptor and map grade
 │  │     ├─ input.ts       phone link, reset handling, keyboard fallback
 │  │     ├─ scene.ts       airfield, props, gates, colliders
+│  │     ├─ industry.ts    ghost works, cargo yard, hangar, annex (merged geometry)
 │  │     ├─ park.ts        skate park, ramps, entrance, street props
 │  │     ├─ indoor.ts      tesseract course, portals, decks, lighting
 │  │     ├─ training.ts    ordered portal crossings, progress, glow

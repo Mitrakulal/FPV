@@ -135,6 +135,25 @@ function apron(
     uv.setXY(i, uv.getX(i) * rx * 0.22, uv.getY(i) * rz * 0.22);
   }
   b.add(mat, g, placeScaled(x, y, z, rx, rz, 1, -Math.PI / 2));
+
+  // Ragged fringe: a few smaller discs around the rim break the perfect circle.
+  const rr = seeded(Math.round(x * 13.7 + z * 3.1));
+  for (let i = 0; i < 7; i++) {
+    const a = rr() * Math.PI * 2;
+    const edge = 0.6 + rr() * 0.32;
+    const ex = rx * (0.14 + rr() * 0.16);
+    const ez = rz * (0.14 + rr() * 0.16);
+    const eg = new THREE.CircleGeometry(1, 22);
+    const euv = eg.getAttribute('uv');
+    for (let k = 0; k < euv.count; k++) {
+      euv.setXY(k, euv.getX(k) * ex * 0.22, euv.getY(k) * ez * 0.22);
+    }
+    b.add(
+      mat,
+      eg,
+      placeScaled(x + Math.cos(a) * rx * edge, y + 0.004 + i * 0.0005, z + Math.sin(a) * rz * edge, ex, ez, 1, -Math.PI / 2),
+    );
+  }
 }
 
 function box(colliders: Collider[], x: number, z: number, w: number, d: number, h: number, y = 0): void {
@@ -173,23 +192,46 @@ function shed(
   const hd = d / 2;
   const door = opts.door;
 
-  // long side walls
+  // long side walls: two solid runs with a bay door between them
+  const sideDoor = 6.4;
+  const sideDoorH = 4.6;
+  const runLen = (d - sideDoor) / 2;
   for (const sx of [-1, 1]) {
-    b.add(opts.wallMat, new THREE.BoxGeometry(t, h, d), place(x + sx * hw, h / 2, z), [d * 0.16, h * 0.16]);
-    colliders.push({
-      min: { x: x + sx * hw - t / 2, y: 0, z: z - hd },
-      max: { x: x + sx * hw + t / 2, y: h, z: z + hd },
-    });
-    // broken window band along the inside face
-    for (let i = 0; i < 5; i++) {
-      const wz = z - hd + 3 + i * ((d - 6) / 4);
-      b.add(opts.glassMat, new THREE.BoxGeometry(0.08, 1.7, (d - 6) / 5 - 1.1), place(x + sx * (hw - t / 2), h * 0.62, wz));
+    const wx = x + sx * hw;
+    for (const sgn of [-1, 1]) {
+      const rz = z + sgn * (sideDoor / 2 + runLen / 2);
+      b.add(opts.wallMat, new THREE.BoxGeometry(t, h, runLen), place(wx, h / 2, rz), [runLen * 0.16, h * 0.16]);
+      colliders.push({
+        min: { x: wx - t / 2, y: 0, z: rz - runLen / 2 },
+        max: { x: wx + t / 2, y: h, z: rz + runLen / 2 },
+      });
     }
-    // pilasters give the long wall some relief and catch the low sun
-    for (let i = 0; i < 5; i++) {
-      const pz = z - hd + 3 + i * ((d - 6) / 4);
-      b.add(opts.wallMat, new THREE.BoxGeometry(t + 0.5, h, 0.7), place(x + sx * (hw + 0.12), h / 2, pz), [0.8, h * 0.16]);
+    // lintel over the bay door + rusted jambs
+    b.add(
+      opts.wallMat,
+      new THREE.BoxGeometry(t, h - sideDoorH, sideDoor),
+      place(wx, sideDoorH + (h - sideDoorH) / 2, z),
+      [sideDoor * 0.16, (h - sideDoorH) * 0.16],
+    );
+    for (const sgn of [-1, 1]) {
+      b.add(opts.postMat, new THREE.BoxGeometry(0.22, sideDoorH, 0.3), place(wx, sideDoorH / 2, z + sgn * (sideDoor / 2 + 0.1)));
     }
+    // glazing on both faces so the wall reads from inside and out
+    for (const dx of [-0.72, -0.38, 0.38, 0.72]) {
+      for (const off of [-1, 1]) {
+        b.add(
+          opts.glassMat,
+          new THREE.BoxGeometry(0.1, 1.7, 2.8),
+          place(wx + off * (t / 2 + 0.02), h * 0.62, z + dx * hd),
+        );
+      }
+    }
+    // pilasters between the window bays
+    for (const dx of [-0.9, -0.55, 0.55, 0.9]) {
+      b.add(opts.wallMat, new THREE.BoxGeometry(t + 0.5, h, 0.7), place(wx + sx * 0.12, h / 2, z + dx * hd), [0.8, h * 0.16]);
+    }
+    // eave flashing hides the wall/roof seam
+    b.add(opts.roofMat, new THREE.BoxGeometry(t + 0.7, 0.32, d), place(wx, h + 0.05, z), [d * 0.35, 0.6]);
   }
 
   // end walls with a fly-through opening
@@ -280,6 +322,7 @@ interface Mats {
   steel: THREE.MeshStandardMaterial;
   glass: THREE.MeshStandardMaterial;
   gravel: THREE.MeshStandardMaterial;
+  hard: THREE.MeshStandardMaterial;
   lamp: THREE.MeshStandardMaterial;
   container: THREE.MeshStandardMaterial;
 }
@@ -292,9 +335,9 @@ function ghostWorks(
   platforms: Platform[],
 ): void {
   // ---------------------------------------------------------------- yard floor
-  apron(b, m.gravel, -36, -128, 27, 43, 0.02);
-  apron(b, m.gravel, -44, -102, 17, 15, 0.03);
-  apron(b, m.gravel, -26, -158, 19, 17, 0.035);
+  apron(b, m.hard, -36, -128, 27, 43, 0.02);
+  apron(b, m.hard, -44, -102, 17, 15, 0.03);
+  apron(b, m.hard, -26, -158, 19, 17, 0.035);
 
   // ---------------------------------------------------------------- the sheds
   shed(b, colliders, platforms, {
@@ -417,9 +460,9 @@ function cargoYard(
   platforms: Platform[],
 ): void {
   // ---------------------------------------------------------------- apron
-  apron(b, m.gravel, 30, -124, 20, 35, 0.02);
-  apron(b, m.gravel, 40, -140, 14, 12, 0.03);
-  apron(b, m.gravel, 22, -104, 15, 12, 0.035);
+  apron(b, m.hard, 30, -124, 20, 35, 0.02);
+  apron(b, m.hard, 40, -140, 14, 12, 0.03);
+  apron(b, m.hard, 22, -104, 15, 12, 0.035);
 
   // ---------------------------------------------------------------- containers
   // One instanced mesh for the whole stack yard; instance colour does the rest.
@@ -1000,6 +1043,7 @@ export async function buildIndustry(
   const corrugated = await assets.tex('corrugated_iron_02', 1, 1);
   const rusty = await assets.tex('rusty_metal_02', 1, 1);
   const gravel = await assets.tex('gravel_floor', 1, 1);
+  const worn = await assets.tex('concrete_floor_worn_001', 1, 1);
 
   const m: Mats = {
     wall: pbr(concrete, { color: 0x8d877b, roughness: 0.97, normalScale: 1.3, envMapIntensity: 0.45 }),
@@ -1007,7 +1051,8 @@ export async function buildIndustry(
     rust: pbr(rusty, { color: 0x7d5238, roughness: 0.88, metalness: 0.4, normalScale: 1.2, envMapIntensity: 0.65 }),
     steel: new THREE.MeshStandardMaterial({ color: 0x4a4f55, roughness: 0.55, metalness: 0.8 }),
     glass: new THREE.MeshStandardMaterial({ color: 0x0a0d10, roughness: 0.8, metalness: 0.1 }),
-    gravel: pbr(gravel, { color: 0x6e6b62, roughness: 1, normalScale: 1, envMapIntensity: 0.35 }),
+    gravel: pbr(gravel, { color: 0x596363, roughness: 1, normalScale: 1, envMapIntensity: 0.35 }),
+    hard: pbr(worn, { color: 0x8d8a80, roughness: 1, normalScale: 1, envMapIntensity: 0.4 }),
     lamp: new THREE.MeshStandardMaterial({
       color: 0xffb15c,
       emissive: 0xff8a3c,
