@@ -14,7 +14,7 @@ namespace FpvSetup
     internal static class InstallInfo
     {
         public const string Product = "FPV Rig";
-        public const string Version = "0.2.0";
+        public const string Version = "0.3.0";
         public const string Publisher = "Mitrakulal";
         public const string RegistryKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\FPV Rig";
 

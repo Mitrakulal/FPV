@@ -18,16 +18,16 @@ using Microsoft.Win32;
 [assembly: AssemblyProduct("FPV Rig")]
 [assembly: AssemblyCompany("Mitrakulal")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 Mitrakulal")]
-[assembly: AssemblyVersion("0.2.0.0")]
-[assembly: AssemblyFileVersion("0.2.0.0")]
-[assembly: AssemblyInformationalVersion("0.2.0")]
+[assembly: AssemblyVersion("0.3.0.0")]
+[assembly: AssemblyFileVersion("0.3.0.0")]
+[assembly: AssemblyInformationalVersion("0.3.0")]
 
 namespace FpvRig
 {
     internal static class AppInfo
     {
         public const string Product = "FPV Rig";
-        public const string Version = "0.2.0";
+        public const string Version = "0.3.0";
         public const string Tagline = "Offline FPV simulator. Your phone is the transmitter.";
     }
 

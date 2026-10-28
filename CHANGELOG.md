@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 — industrial district
 
 - FPV view now keeps the airframe in the shadow pass, so the quad casts a shadow while you
   fly it instead of disappearing from the scene completely.

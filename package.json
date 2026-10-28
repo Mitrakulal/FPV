@@ -1,6 +1,6 @@
 {
   "name": "fpv-rig",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Offline FPV simulator: laptop physics and rendering, Android phone as a real transmitter over USB",
