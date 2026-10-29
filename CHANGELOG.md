@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 — prop and roof fixes
 
 - Props now spin up into a swept blur disc instead of three solid blades strobing past the
   camera: the blades fade out as RPM climbs and a textured disc fades in, so a hover reads

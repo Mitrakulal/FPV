@@ -90,7 +90,7 @@ shows `LINK LOST` on the HUD.
 
 ### Install on Windows (recommended)
 
-Run **`FPV-Rig-0.3.0-Setup.exe`** (from the release page, or build it with
+Run **`FPV-Rig-0.3.1-Setup.exe`** (from the release page, or build it with
 `npm run package:win`). It installs for the current Windows user, needs no administrator
 rights, and bundles Node, the local server and ADB. Node.js does not need to be installed.
 
@@ -109,7 +109,7 @@ rights, and bundles Node, the local server and ADB. Node.js does not need to be 
 6. **Restart a run.** Use the **R** button next to **ARM** on the phone or `R` on the
    keyboard. A restart disarms the phone so the next run cannot start hot.
 
-The portable build is `FPV-Rig-0.3.0-portable.zip`: extract it and run `FPV.exe`. See
+The portable build is `FPV-Rig-0.3.1-portable.zip`: extract it and run `FPV.exe`. See
 [docs/DESKTOP.md](docs/DESKTOP.md) for installer details, silent classroom deployment,
 uninstall, logs and troubleshooting.
 

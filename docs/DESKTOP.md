@@ -6,8 +6,8 @@
 
 FPV Rig ships two Windows forms:
 
-- **`FPV-Rig-0.3.0-Setup.exe`** — one-click, per-user installer. No administrator prompt.
-- **`FPV-Rig-0.3.0-portable.zip`** — extract anywhere and run `FPV.exe`.
+- **`FPV-Rig-0.3.1-Setup.exe`** — one-click, per-user installer. No administrator prompt.
+- **`FPV-Rig-0.3.1-portable.zip`** — extract anywhere and run `FPV.exe`.
 
 Both contain the simulator, the local Node server, the phone transmitter page, the ADB
 helper and a small native launcher. Node.js and `adb` do **not** need to be installed on the
@@ -33,7 +33,7 @@ internet connection is involved.
 
 ## Install
 
-1. Run **`FPV-Rig-0.3.0-Setup.exe`**.
+1. Run **`FPV-Rig-0.3.1-Setup.exe`**.
 2. Keep the desktop shortcut and **Open FPV Rig** checked, then click **Install FPV Rig**.
 3. On the phone:
    - open **Settings → About phone** and tap **Build number** seven times,
@@ -58,7 +58,7 @@ uninstaller. It does not request administrator rights.
 For classroom imaging:
 
 ```bat
-FPV-Rig-0.3.0-Setup.exe /silent
+FPV-Rig-0.3.1-Setup.exe /silent
 ```
 
 Silent install uses the same per-user folder and creates shortcuts, but does not launch the
@@ -73,8 +73,8 @@ to remove them as well.
 
 ## Portable build
 
-1. Extract `FPV-Rig-0.3.0-portable.zip`.
-2. Run `FPV.exe` from the extracted `FPV-Rig-0.3.0` folder.
+1. Extract `FPV-Rig-0.3.1-portable.zip`.
+2. Run `FPV.exe` from the extracted `FPV-Rig-0.3.1` folder.
 3. Settings and logs live in `data\` beside `FPV.exe`.
 
 The portable build is useful for a USB stick, a lab machine without an installer policy, or
@@ -122,9 +122,9 @@ Android platform-tools ZIP from Google and extracts it. Build artifacts are not 
 It produces:
 
 ```text
-dist/release/FPV-Rig-0.3.0/
-dist/release/FPV-Rig-0.3.0-portable.zip
-dist/release/FPV-Rig-0.3.0-Setup.exe
+dist/release/FPV-Rig-0.3.1/
+dist/release/FPV-Rig-0.3.1-portable.zip
+dist/release/FPV-Rig-0.3.1-Setup.exe
 dist/release/SHA256SUMS.txt
 ```
 
