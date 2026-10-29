@@ -14,6 +14,59 @@ export interface QuadModel {
    * shadow a real quad throws without staring at the inside of the frame.
    */
   setFirstPerson(on: boolean): void;
+  /**
+   * Prop motion blur, 0 (stopped) to 1 (full RPM). Fades the discrete blades
+   * out and the swept blur disc in, so a spinning prop reads as a disc instead
+   * of three sticks strobing past the camera.
+   */
+  setPropBlur(blur: number): void;
+}
+
+/**
+ * A swept-prop disc: faint arcs at every radius, faded at the hub and rim.
+ * Drawn once into a canvas texture and shared by all four blur discs.
+ */
+function propBlurTexture(): THREE.CanvasTexture {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const g = canvas.getContext('2d');
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  if (!g) return tex;
+
+  // deterministic so every run looks the same
+  let seed = 7331;
+  const rnd = () => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647;
+  };
+  const c = size / 2;
+  g.strokeStyle = '#ffffff';
+  g.lineCap = 'round';
+  for (let i = 0; i < 150; i++) {
+    const r = 7 + rnd() * 54;
+    const a0 = rnd() * Math.PI * 2;
+    const span = 0.25 + rnd() * 1.9;
+    g.globalAlpha = 0.1 + rnd() * 0.38;
+    g.lineWidth = 0.8 + rnd() * 2.6;
+    g.beginPath();
+    g.arc(c, c, r, a0, a0 + span);
+    g.stroke();
+  }
+  // soft hub and rim so the disc has no hard edge
+  g.globalAlpha = 1;
+  g.globalCompositeOperation = 'destination-in';
+  const grad = g.createRadialGradient(c, c, 3, c, c, c);
+  grad.addColorStop(0, 'rgba(255,255,255,0)');
+  grad.addColorStop(0.22, 'rgba(255,255,255,0.95)');
+  grad.addColorStop(0.78, 'rgba(255,255,255,0.8)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, size, size);
+  tex.needsUpdate = true;
+  return tex;
 }
 
 /**
@@ -52,6 +105,7 @@ export function buildQuad(): QuadModel {
     roughness: 0.55,
     metalness: 0.05,
     side: THREE.DoubleSide,
+    transparent: true,
   });
   // FPV sits between the props: they sweep past as dark translucent blades,
   // never as solid colour. Same geometry, different material.
@@ -62,8 +116,10 @@ export function buildQuad(): QuadModel {
     depthWrite: false,
     side: THREE.DoubleSide,
   });
+  // The swept disc. Dark, textured with radial streaks, faded in with RPM.
   const blurMat = new THREE.MeshBasicMaterial({
-    color: 0x9fb6cc,
+    color: 0x1b2530,
+    map: propBlurTexture(),
     transparent: true,
     opacity: 0,
     depthWrite: false,
@@ -234,7 +290,13 @@ export function buildQuad(): QuadModel {
       // In FPV the front props sweep past the lens. They are redrawn with a dark
       // translucent material so they read as blur, not solid blue paddles.
       for (const b of blades) b.material = on ? fpvPropMat : propMat;
-      for (const d of discs) d.visible = !on;
+    },
+    setPropBlur(blur: number) {
+      const b = Math.max(0, Math.min(1, blur));
+      // blades dissolve into the disc as RPM climbs
+      propMat.opacity = 1 - 0.9 * b;
+      fpvPropMat.opacity = 0.5 * (1 - 0.7 * b);
+      for (const d of discs) (d.material as THREE.MeshBasicMaterial).opacity = 0.62 * b;
     },
   };
   return model;

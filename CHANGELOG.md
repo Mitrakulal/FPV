@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Props now spin up into a swept blur disc instead of three solid blades strobing past the
+  camera: the blades fade out as RPM climbs and a textured disc fades in, so a hover reads
+  as a spinning prop rather than a stick rotating in steps.
+- The sawtooth factory roofs, the hangar gable and the surviving warehouse slab are solid.
+  You now land on them instead of dropping through; the broken roof panels stay fly-through.
+- Removed the round reflective puddles from the runway. They read as odd white discs on the
+  asphalt rather than water, and the airfield is dry.
+
 ## 0.3.0 — industrial district
 
 - FPV view now keeps the airframe in the shadow pass, so the quad casts a shadow while you

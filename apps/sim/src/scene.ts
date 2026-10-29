@@ -193,33 +193,6 @@ export async function buildWorld(renderer: THREE.WebGLRenderer, assets: Assets):
   markings.receiveShadow = true;
   scene.add(markings);
 
-  // puddles
-  const puddleMat = new THREE.MeshStandardMaterial({
-    color: 0x101820,
-    roughness: 0.07,
-    metalness: 0.55,
-    envMapIntensity: 1.6,
-    transparent: true,
-    opacity: 0.95,
-  });
-  const puddles: THREE.Mesh[] = [];
-  const pr = rng(91);
-  for (const [x, z, sx, sz] of [
-    [-7.5, -16, 1.7, 1.1],
-    [9, -31, 2.2, 1.3],
-    [-13, -44, 1.3, 0.9],
-    [15, -8, 1.9, 1.2],
-    [-2, -56, 1.4, 1.6],
-  ] as const) {
-    const p = new THREE.Mesh(new THREE.CircleGeometry(1, 26), puddleMat);
-    p.rotation.x = -Math.PI / 2;
-    p.rotation.z = pr() * Math.PI;
-    p.scale.set(sx, sz, 1);
-    p.position.set(x, 0.014, z);
-    scene.add(p);
-    puddles.push(p);
-  }
-
   // ---------------------------------------------------------------- warehouse
   const concrete = await assets.tex('concrete_wall_008', 5, 2);
   const concreteFloor = await assets.tex('concrete_floor_worn_001', 8, 6);
@@ -290,6 +263,11 @@ export async function buildWorld(renderer: THREE.WebGLRenderer, assets: Assets):
   roofA.rotation.z = 0.03;
   shadowed(roofA);
   scene.add(roofA);
+  // the surviving roof slab is solid, so a quad landing on it stays on top
+  colliders.push({
+    min: { x: -42, y: 7.3, z: -35 },
+    max: { x: -28, y: 7.75, z: -7 },
+  });
 
   // the other half of the roof is gone — collapsed panels lie in the yard
   for (const [px, pz, prot, py] of [
@@ -1018,7 +996,6 @@ export async function buildWorld(renderer: THREE.WebGLRenderer, assets: Assets):
     ramps,
     platforms,
     dust,
-    puddles,
     spawn: { x: 0, y: 0.06, z: 0 },
     overview: { pos: [0, 36, 30], look: [0, 0, -28] },
     grade: {

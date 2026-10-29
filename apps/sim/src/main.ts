@@ -487,19 +487,20 @@ function frame(now: number) {
     if (result.complete) courseComplete = true;
   }
 
-  // props + motion discs
+  // props + motion blur
   const quad = activeWorld.quad;
   const level = sim.state.motors.reduce((a, b) => a + b, 0) / 4;
   const spinning = armedSignal && !sim.state.crashed;
-  const wash = spinning ? Math.max(0, (level - 0.05) * 0.5) : 0;
+  // Spool the visual blur in above idle, so the props read as swept discs in a
+  // hover instead of three blades strobing past the lens.
+  const blur = spinning ? Math.max(0, Math.min(1, (level - 0.1) / 0.35)) : 0;
+  quad.setPropBlur(blur);
   for (let i = 0; i < quad.propGroups.length; i++) {
     const g = quad.propGroups[i];
     if (!g) continue;
     propPhase[i] =
-      (propPhase[i] ?? 0) + (spinning ? dt * (4 + level * 62) : 0) * (i % 2 === 0 ? 1 : -1);
+      (propPhase[i] ?? 0) + (spinning ? dt * (6 + level * 150) : 0) * (i % 2 === 0 ? 1 : -1);
     g.rotation.y = propPhase[i] ?? 0;
-    const disc = quad.discs[i];
-    if (disc) (disc.material as THREE.MeshBasicMaterial).opacity = wash;
   }
 
   const s = sim.state;
@@ -609,6 +610,7 @@ setTimeout(() => hud.boot.remove(), 700);
   activeWorld: () => activeWorld,
   sim,
   camera,
+  input,
   post,
   assets,
   audio,

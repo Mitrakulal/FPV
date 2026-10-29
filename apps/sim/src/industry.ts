@@ -273,6 +273,16 @@ function shed(
     );
     // vertical glazed strip facing the light
     b.add(opts.glassMat, new THREE.BoxGeometry(0.08, 0.9, d * 0.96), place(cx + tw / 2 - 0.1, h + 0.55, z));
+    // solid roof volume, stepped to follow the slope. Without this the slab is
+    // a visual only and a quad drops straight through it from above.
+    for (let s = 0; s < 3; s++) {
+      const x0 = cx - tw / 2 + (s * tw) / 3;
+      const x1 = x0 + tw / 3;
+      colliders.push({
+        min: { x: x0, y: h + 0.5 + (x0 - cx) * 0.447 - 0.35, z: z - hd },
+        max: { x: x1, y: h + 0.5 + (x1 - cx) * 0.447 + 0.12, z: z + hd },
+      });
+    }
   }
   // ridge cap at each end of the roof span
   for (const sz of [-1, 1]) {
@@ -694,6 +704,21 @@ function southField(
   for (const gx of [cx + hw, cx - hw]) {
     b.add(m.wall, new THREE.BoxGeometry(t, rise * 0.52, d), place(gx, h + rise * 0.26, cz), [0.5, 3]);
     b.add(m.wall, new THREE.BoxGeometry(t, rise * 0.52, d * 0.56), place(gx, h + rise * 0.74, cz), [0.5, 2]);
+  }
+
+  // solid gable volume, stepped along the slope so the roof catches a quad
+  // instead of letting it drop through the two thin slabs
+  for (let i = 0; i < 3; i++) {
+    const zNear = (hd * i) / 3;
+    const zFar = (hd * (i + 1)) / 3;
+    const yTop = h + rise - zNear * (rise / hd);
+    const yBot = h + rise - zFar * (rise / hd) - 0.35;
+    for (const sz of [-1, 1] as const) {
+      colliders.push({
+        min: { x: cx - hw - 0.6, y: yBot, z: cz + sz * (sz > 0 ? zNear : zFar) },
+        max: { x: cx + hw + 0.6, y: yTop, z: cz + sz * (sz > 0 ? zFar : zNear) },
+      });
+    }
   }
 
   // open north face: header beam + rusted sliding door pushed to one side

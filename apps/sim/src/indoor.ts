@@ -781,7 +781,6 @@ export async function buildIndoorWorld(renderer: THREE.WebGLRenderer, assets: As
     ramps,
     platforms,
     dust,
-    puddles: [],
     spawn: { x: 0, y: 0.06, z: 14 },
     overview: { pos: [0, 9.5, -2], look: [0, 4, -40] },
     grade: {

@@ -24,7 +24,6 @@ export interface World {
   ramps: Ramp[];
   platforms: Platform[];
   dust: THREE.Points;
-  puddles: THREE.Mesh[];
   spawn: { x: number; y: number; z: number };
   overview: { pos: [number, number, number]; look: [number, number, number] };
   grade: WorldGrade;
