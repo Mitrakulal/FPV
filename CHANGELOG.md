@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- USB gamepads and RC simulator dongles are read directly through the browser's Gamepad
+  API: left stick throttle/yaw, right stick pitch/roll, A arms, B restarts. The HUD shows
+  GAMEPAD when one is connected, and the keyboard remains the fallback.
+- Keyboard arming works again after a phone link goes stale, instead of staying locked out
+  once any phone frame has been seen.
+
 ## 0.3.1 — prop and roof fixes
 
 - Props now spin up into a swept blur disc instead of three solid blades strobing past the

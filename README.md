@@ -42,6 +42,9 @@ possible but is not part of the current build.
 
 - **Phone as TX over USB** — the page is served from the phone's own `127.0.0.1` through
   `adb reverse`; the link never touches Wi-Fi or a router.
+- **USB gamepad or RC sim dongle** — any standard gamepad is read directly in the browser:
+  left stick throttle/yaw, right stick pitch/roll, A to arm, B to restart. FlySky/OpenTX
+  simulator dongles enumerate as joysticks, so a trainer-port radio can drive the sim too.
 - **Absolute throttle, Mode 1/2, hold/spring** — the default is Mode 2 with HOLD. A training
   mode springs the throttle back to the hover point.
 - **ANGLE and ACRO** — ANGLE is the phone default and self-levels to ±45°; ACRO exposes the
@@ -121,6 +124,8 @@ Requirements:
 - Node.js 22 or newer.
 - Chrome or Edge on the laptop.
 - An Android phone with Developer options and USB debugging, plus a data-capable USB cable.
+- Optional: a USB gamepad or RC simulator dongle. It shows up as a joystick and needs no
+  extra driver.
 
 ```bat
 npm install

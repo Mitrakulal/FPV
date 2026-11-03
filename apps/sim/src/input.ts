@@ -33,6 +33,12 @@ export class InputClient {
   private keyThrottle = 0;
   private keyArmed = false;
 
+  // USB gamepad / RC sim dongle. Polled every frame; the phone link still wins
+  // whenever it is actually sending frames.
+  private pad: Gamepad | null = null;
+  private padName = '';
+  private padPrev: boolean[] = [];
+
   link: LinkInfo = {
     connected: false,
     fresh: false,
@@ -166,8 +172,56 @@ export class InputClient {
 
   /** Integrate keyboard throttle once per rendered frame (wall-clock dt). */
   update(dt: number) {
+    this.pollGamepad();
     if (this.keys.has('KeyW')) this.keyThrottle = Math.min(1, this.keyThrottle + 0.6 * dt);
     if (this.keys.has('KeyS')) this.keyThrottle = Math.max(0, this.keyThrottle - 0.9 * dt);
+  }
+
+  /**
+   * Read the first connected standard gamepad. This covers USB RC simulator
+   * dongles (they enumerate as a joystick) and ordinary Xbox/PlayStation pads.
+   * A / cross toggles arm, B / circle restarts the run.
+   */
+  private pollGamepad(): void {
+    if (typeof navigator.getGamepads !== 'function') return;
+    let pad: Gamepad | null = null;
+    const pads = navigator.getGamepads();
+    for (let i = 0; i < pads.length; i++) {
+      const p = pads[i];
+      if (p && p.connected) {
+        pad = p;
+        break;
+      }
+    }
+    this.pad = pad;
+    this.padName = pad?.id ?? '';
+    if (!pad) {
+      this.padPrev = [];
+      return;
+    }
+    const pressed = pad.buttons.map((b) => !!b?.pressed);
+    if (pressed[0] && !this.padPrev[0]) this.toggleArm();
+    if (pressed[1] && !this.padPrev[1]) this.onDiscreteKey?.('KeyR');
+    this.padPrev = pressed;
+  }
+
+  /** Mode 2: left stick throttle/yaw, right stick pitch/roll. */
+  private readGamepad(pad: Gamepad): Inputs {
+    const axis = (i: number) => pad.axes[i] ?? 0;
+    const dz = (v: number) => (Math.abs(v) < 0.06 ? 0 : v);
+    return {
+      throttle: Math.max(0, Math.min(1, (1 - axis(1)) / 2)),
+      yaw: dz(axis(0)),
+      pitch: dz(axis(3)),
+      roll: dz(axis(2)),
+      armed: this.keyArmed,
+      angle: false,
+    };
+  }
+
+  /** Name of the connected gamepad, or an empty string. */
+  get gamepadName(): string {
+    return this.padName;
   }
 
   /** Inputs for the next physics tick. */
@@ -189,6 +243,8 @@ export class InputClient {
       };
     }
 
+    if (this.pad) return this.readGamepad(this.pad);
+
     // keyboard fallback, so the sim is usable without a phone
     const yaw = (this.keys.has('KeyD') ? 1 : 0) - (this.keys.has('KeyA') ? 1 : 0);
     // up arrow = nose down / forward, same as pushing a radio stick forward
@@ -200,7 +256,7 @@ export class InputClient {
       yaw,
       pitch,
       roll,
-      armed: this.lastFrame ? false : this.keyArmed,
+      armed: this.keyArmed,
       angle: false,
     };
   }

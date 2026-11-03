@@ -381,12 +381,19 @@ function updateMenuCamera(now: number) {
 
 function updateHud(now: number) {
   const link = input.link;
+  const pad = input.gamepadName;
   const s = sim.state;
   const inp = input.read();
   const armed = inp.armed && !s.crashed;
 
-  hud.linkDot.classList.toggle('ok', link.fresh);
-  hud.linkText.textContent = link.fresh ? 'TX live' : link.connected ? 'TX silent' : 'TX offline';
+  hud.linkDot.classList.toggle('ok', link.fresh || !!pad);
+  hud.linkText.textContent = pad
+    ? 'GAMEPAD'
+    : link.fresh
+      ? 'TX live'
+      : link.connected
+        ? 'TX silent'
+        : 'TX offline';
   hud.rtt.textContent = link.rttMs >= 0 ? link.rttMs.toFixed(1) : '--';
   hud.hz.textContent = link.fresh ? String(link.hz) : '--';
   hud.pkts.textContent = String(link.packets);
@@ -417,9 +424,11 @@ function updateHud(now: number) {
   hud.armPill.textContent = armed ? 'ARMED' : 'DISARMED';
   hud.armPill.classList.toggle('armed', armed);
   hud.modePill.textContent = inp.angle ? 'ANGLE' : 'ACRO';
-  hud.helpPhone.textContent = link.fresh
-    ? 'TX: phone link live'
-    : 'phone: open /tx/ over adb reverse';
+  hud.helpPhone.textContent = pad
+    ? `gamepad: ${pad.slice(0, 36)} · A arm · B reset`
+    : link.fresh
+      ? 'TX: phone link live'
+      : 'phone: open /tx/ over adb reverse';
 
   if (sim.state.crashed) {
     setBanner('CRASHED · R to restart from the start', 'crashed');
@@ -427,7 +436,7 @@ function updateHud(now: number) {
     setBanner('COURSE COMPLETE · R to fly again', null);
   } else if (!link.fresh && link.packets > 0) {
     setBanner('LINK LOST · motors cut', 'lost');
-  } else if (!link.fresh && link.packets === 0 && now - bootAt < 8000) {
+  } else if (!link.fresh && link.packets === 0 && now - bootAt < 8000 && !pad) {
     setBanner(
       link.connected
         ? 'no TX data · open /tx/ on the phone'
